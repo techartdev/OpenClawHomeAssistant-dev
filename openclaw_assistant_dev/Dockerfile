@@ -24,6 +24,8 @@ RUN apk add --no-cache \
     python3 \
     nginx \
     ttyd \
+    nghttp2-libs \
+    openssl \
     nodejs-current \
     npm
 
