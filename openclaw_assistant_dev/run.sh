@@ -27,6 +27,9 @@ ROUTER_KEY=$(jq -r '.router_ssh_key_path // "/data/keys/router_ssh"' "$OPTIONS_F
 CLEAN_LOCKS_ON_START=$(jq -r '.clean_session_locks_on_start // true' "$OPTIONS_FILE")
 CLEAN_LOCKS_ON_EXIT=$(jq -r '.clean_session_locks_on_exit // true' "$OPTIONS_FILE")
 
+# Gateway LAN mode toggle (default false for security)
+GATEWAY_LAN_MODE=$(jq -r '.gateway_lan_mode // false' "$OPTIONS_FILE")
+
 export TZ="$TZNAME"
 
 # Reduce risk of secrets ending up in logs
@@ -180,6 +183,45 @@ cfg = {
 cfg_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding='utf-8')
 print("INFO: Wrote minimal OpenClaw config (gateway.mode=local, auth.token generated)")
 PY
+fi
+
+# ------------------------------------------------------------------------------
+# Apply gateway LAN mode setting safely (non-destructive config patch)
+# This updates gateway.bind without touching other settings (auth token, etc.)
+# ------------------------------------------------------------------------------
+LAN_MODE="${GATEWAY_LAN_MODE}"
+if [ -f "$OPENCLAW_CONFIG_PATH" ]; then
+  python3 - <<PY
+import json
+from pathlib import Path
+import os
+
+cfg_path = Path(os.environ['OPENCLAW_CONFIG_PATH'])
+lan_mode = os.environ.get('GATEWAY_LAN_MODE', 'false').lower() == 'true'
+
+# Read existing config (preserve formatting as much as possible)
+text = cfg_path.read_text(encoding='utf-8')
+cfg = json.loads(text)
+
+# Determine desired bind value
+desired_bind = "lan" if lan_mode else "loopback"
+
+current_bind = cfg.get("gateway", {}).get("bind", "")
+
+if current_bind != desired_bind:
+    # Ensure gateway section exists
+    if "gateway" not in cfg:
+        cfg["gateway"] = {}
+    cfg["gateway"]["bind"] = desired_bind
+    
+    # Write back with nice formatting
+    cfg_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding='utf-8')
+    print(f"INFO: Updated gateway.bind to '{desired_bind}' (gateway_lan_mode={lan_mode})")
+else:
+    print(f"INFO: gateway.bind already '{desired_bind}', no change needed")
+PY
+else
+  echo "WARN: OpenClaw config not found at $OPENCLAW_CONFIG_PATH, cannot apply gateway_lan_mode"
 fi
 
 echo "Starting OpenClaw Assistant gateway (openclaw)..."

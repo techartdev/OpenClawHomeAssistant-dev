@@ -47,6 +47,12 @@ options:
   clean_session_locks_on_start: true
   clean_session_locks_on_exit: true
 
+  # Gateway network bind mode:
+  # - true: bind to LAN (accessible from local network, e.g., 0.0.0.0 or LAN IP)
+  # - false: bind to loopback only (127.0.0.1, local access only)
+  # Default is false for security. Toggle this on if you need external access.
+  gateway_lan_mode: false
+
 
 schema:
   timezone: str
@@ -60,4 +66,5 @@ schema:
 
   clean_session_locks_on_start: bool?
   clean_session_locks_on_exit: bool?
+  gateway_lan_mode: bool?
 
