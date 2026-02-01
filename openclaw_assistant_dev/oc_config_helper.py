@@ -91,8 +91,13 @@ def apply_lan_mode_settings(lan_mode: bool, bind_ip: str, port: int):
     Args:
         lan_mode: True for LAN access, False for loopback only
         bind_ip: IP address to bind to (e.g., "0.0.0.0" or "192.168.1.10")
-        port: Port number to listen on
+        port: Port number to listen on (must be 1-65535)
     """
+    # Validate port range
+    if port < 1 or port > 65535:
+        print(f"ERROR: Invalid port {port}. Must be between 1 and 65535")
+        return False
+    
     cfg = read_config()
     if cfg is None:
         cfg = {}
@@ -121,9 +126,8 @@ def apply_lan_mode_settings(lan_mode: bool, bind_ip: str, port: int):
         gateway["bind"] = desired_bind
         changes.append(f"bind: {current_bind} -> {desired_bind}")
     
-    # Only update port when LAN mode is enabled
-    # When in loopback mode, port is typically managed by OpenClaw internally
-    if lan_mode and current_port != port:
+    # Always update port when it differs from the desired value
+    if current_port != port:
         gateway["port"] = port
         changes.append(f"port: {current_port} -> {port}")
     
