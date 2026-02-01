@@ -65,9 +65,22 @@ You have two common setups:
 If your Home Assistant is already exposed via HTTPS (Nabu Casa, reverse proxy, etc.), use that.
 This avoids browser security issues.
 
-#### Option 2: LAN access (http://192.168.x.x)
-If you want to open it directly on your LAN, you must ensure OpenClaw binds to LAN.
-In the terminal:
+#### Option 2: LAN access (http://192.168.x.x) — using add-on options (recommended)
+The easiest way to enable LAN access is via the add-on configuration:
+
+1. Go to Home Assistant → **Settings → Add-ons → OpenClaw Assistant → Configuration**
+2. Set the following options:
+   - `gateway_lan_mode`: **true** (enables LAN binding)
+   - `gateway_bind_ip`: **"0.0.0.0"** (binds to all interfaces) or a specific IP like **"192.168.1.10"**
+   - `gateway_port`: **18789** (or your preferred port)
+3. Restart the add-on
+
+The add-on will automatically update OpenClaw's configuration on startup.
+
+**Pre-population**: If you previously configured OpenClaw manually, the add-on will detect and respect those settings. You can still override them via the add-on options.
+
+#### Option 3: LAN access — manual configuration (advanced)
+If you prefer to configure manually via terminal:
 
 ```sh
 openclaw config set gateway.bind lan
@@ -132,10 +145,25 @@ This allows using the Control UI over LAN HTTP.
 
 ## 5) Add-on options (custom / HA-specific)
 
-This add-on intentionally keeps options minimal. See `openclaw_assistant_dev/config.yaml` (DEV repo).
+This add-on keeps options minimal but practical. See `openclaw_assistant_dev/config.yaml` for the full schema.
+
+### Gateway LAN Mode (NEW)
+Control how the OpenClaw gateway binds to the network:
+
+- **`gateway_lan_mode`** (bool, default **false**)
+  - **false**: Bind to loopback only (127.0.0.1) — secure, local access only
+  - **true**: Bind to LAN — accessible from your local network
+
+When `gateway_lan_mode` is **true**:
+- **`gateway_bind_ip`** (string, default **"0.0.0.0"**)
+  - IP address to bind to. Use `"0.0.0.0"` for all interfaces, or a specific IP like `"192.168.1.10"`
+- **`gateway_port`** (int, default **18789**)
+  - Port number for the gateway to listen on
+
+These settings are applied automatically on add-on startup. No need to run `openclaw config` commands.
 
 ### Terminal
-- `enable_terminal` (default **true**)
+- `enable_terminal` (bool, default **true**)
 
 Security note: the terminal gives shell access inside the add-on container.
 
@@ -154,6 +182,10 @@ For custom automations that need SSH access to a router/firewall or other LAN de
 How to provide the key:
 - Put the private key file under the add-on config directory so it appears in-container at `/data/keys/...`
 - Recommended permissions: `chmod 600`
+
+### Session cleanup
+- `clean_session_locks_on_start` (bool, default **true**) — Remove stale lock files on startup
+- `clean_session_locks_on_exit` (bool, default **true**) — Remove stale lock files on shutdown
 
 ---
 

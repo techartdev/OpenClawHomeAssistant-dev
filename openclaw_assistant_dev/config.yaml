@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.34"
+version: "0.5.35"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -48,10 +48,16 @@ options:
   clean_session_locks_on_exit: true
 
   # Gateway network bind mode:
-  # - true: bind to LAN (accessible from local network, e.g., 0.0.0.0 or LAN IP)
+  # - true: bind to LAN (accessible from local network)
   # - false: bind to loopback only (127.0.0.1, local access only)
   # Default is false for security. Toggle this on if you need external access.
   gateway_lan_mode: false
+
+  # Gateway bind configuration (used when gateway_lan_mode is true)
+  # IP address to bind to. Use "0.0.0.0" for all interfaces, or specific IP like "192.168.1.10"
+  gateway_bind_ip: "0.0.0.0"
+  # Port to listen on
+  gateway_port: 18789
 
 
 schema:
@@ -67,4 +73,6 @@ schema:
   clean_session_locks_on_start: bool?
   clean_session_locks_on_exit: bool?
   gateway_lan_mode: bool?
+  gateway_bind_ip: str?
+  gateway_port: int(1,65535)?
 
