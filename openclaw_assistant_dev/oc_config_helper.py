@@ -12,33 +12,6 @@ from pathlib import Path
 
 CONFIG_PATH = Path(os.environ.get("OPENCLAW_CONFIG_PATH", "/config/.openclaw/openclaw.json"))
 
-# IPv4 address validation regex
-IPV4_REGEX = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')
-
-
-def is_valid_ip(ip: str) -> bool:
-    """Validate IPv4 address format."""
-    if not ip:
-        # Treat empty IP as "no override configured" and consider it acceptable.
-        return True
-    
-    if not IPV4_REGEX.match(ip):
-        return False
-    
-    # Check each octet is 0-255
-    parts = ip.split('.')
-    if len(parts) != 4:
-        return False
-    
-    for part in parts:
-        try:
-            num = int(part)
-            if num < 0 or num > 255:
-                return False
-        except ValueError:
-            return False
-    
-    return True
 
 
 def read_config():
@@ -84,15 +57,19 @@ def set_gateway_setting(key, value):
     return write_config(cfg)
 
 
-def apply_lan_mode_settings(lan_mode: bool, bind_ip: str, port: int):
+def apply_bind_mode_settings(bind_mode: str, port: int):
     """
-    Apply LAN mode settings to OpenClaw config.
+    Apply bind mode settings to OpenClaw config.
     
     Args:
-        lan_mode: True for LAN access, False for loopback only
-        bind_ip: IP address to bind to (e.g., "0.0.0.0" or "192.168.1.10")
+        bind_mode: "loopback" or "lan"
         port: Port number to listen on (must be 1-65535)
     """
+    # Validate bind mode
+    if bind_mode not in ["loopback", "lan"]:
+        print(f"ERROR: Invalid bind_mode '{bind_mode}'. Must be 'loopback' or 'lan'")
+        return False
+    
     # Validate port range
     if port < 1 or port > 65535:
         print(f"ERROR: Invalid port {port}. Must be between 1 and 65535")
@@ -107,24 +84,14 @@ def apply_lan_mode_settings(lan_mode: bool, bind_ip: str, port: int):
     
     gateway = cfg["gateway"]
     
-    # Determine bind value
-    if lan_mode:
-        # Validate bind_ip format
-        if bind_ip and not is_valid_ip(bind_ip):
-            print(f"ERROR: Invalid bind_ip '{bind_ip}'. Must be a valid IPv4 address or '0.0.0.0'")
-            return False
-        desired_bind = bind_ip if bind_ip else "0.0.0.0"
-    else:
-        desired_bind = "loopback"
-    
     current_bind = gateway.get("bind", "")
     current_port = gateway.get("port", 18789)
     
     changes = []
     
-    if current_bind != desired_bind:
-        gateway["bind"] = desired_bind
-        changes.append(f"bind: {current_bind} -> {desired_bind}")
+    if current_bind != bind_mode:
+        gateway["bind"] = bind_mode
+        changes.append(f"bind: {current_bind} -> {bind_mode}")
     
     # Always update port when it differs from the desired value
     if current_port != port:
@@ -139,7 +106,7 @@ def apply_lan_mode_settings(lan_mode: bool, bind_ip: str, port: int):
             print("ERROR: Failed to write config")
             return False
     else:
-        print(f"INFO: Gateway settings already correct (bind={desired_bind}, port={port})")
+        print(f"INFO: Gateway settings already correct (bind={bind_mode}, port={port})")
         return True
 
 
@@ -151,14 +118,13 @@ def main():
     
     cmd = sys.argv[1]
     
-    if cmd == "apply-lan-mode":
-        if len(sys.argv) != 5:
-            print("Usage: oc_config_helper.py apply-lan-mode <true|false> <bind_ip> <port>")
+    if cmd == "apply-bind-mode":
+        if len(sys.argv) != 4:
+            print("Usage: oc_config_helper.py apply-bind-mode <loopback|lan> <port>")
             sys.exit(1)
-        lan_mode = sys.argv[2].lower() == "true"
-        bind_ip = sys.argv[3]
-        port = int(sys.argv[4])
-        success = apply_lan_mode_settings(lan_mode, bind_ip, port)
+        bind_mode = sys.argv[2]
+        port = int(sys.argv[3])
+        success = apply_bind_mode_settings(bind_mode, port)
         sys.exit(0 if success else 1)
     
     elif cmd == "get":

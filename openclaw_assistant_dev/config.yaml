@@ -48,15 +48,12 @@ options:
   clean_session_locks_on_exit: true
 
   # Gateway network bind mode:
-  # - true: bind to LAN (accessible from local network)
-  # - false: bind to loopback only (127.0.0.1, local access only)
-  # Default is false for security. Toggle this on if you need external access.
-  gateway_lan_mode: false
+  # - loopback: bind to 127.0.0.1 only (local access only, more secure)
+  # - lan: bind to all interfaces (accessible from local network)
+  # Default is loopback for security.
+  gateway_bind_mode: loopback
 
-  # Gateway bind configuration (used when gateway_lan_mode is true)
-  # IP address to bind to. Use "0.0.0.0" for all interfaces, or specific IP like "192.168.1.10"
-  gateway_bind_ip: "0.0.0.0"
-  # Port to listen on
+  # Gateway port to listen on
   gateway_port: 18789
 
 
@@ -72,7 +69,6 @@ schema:
 
   clean_session_locks_on_start: bool?
   clean_session_locks_on_exit: bool?
-  gateway_lan_mode: bool?
-  gateway_bind_ip: str?
+  gateway_bind_mode: list(loopback|lan)?
   gateway_port: int(1,65535)?
 

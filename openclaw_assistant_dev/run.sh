@@ -27,9 +27,8 @@ ROUTER_KEY=$(jq -r '.router_ssh_key_path // "/data/keys/router_ssh"' "$OPTIONS_F
 CLEAN_LOCKS_ON_START=$(jq -r '.clean_session_locks_on_start // true' "$OPTIONS_FILE")
 CLEAN_LOCKS_ON_EXIT=$(jq -r '.clean_session_locks_on_exit // true' "$OPTIONS_FILE")
 
-# Gateway LAN mode toggle (default false for security)
-GATEWAY_LAN_MODE=$(jq -r '.gateway_lan_mode // false' "$OPTIONS_FILE")
-GATEWAY_BIND_IP=$(jq -r '.gateway_bind_ip // "0.0.0.0"' "$OPTIONS_FILE")
+# Gateway bind mode (loopback or lan)
+GATEWAY_BIND_MODE=$(jq -r '.gateway_bind_mode // "loopback"' "$OPTIONS_FILE")
 GATEWAY_PORT=$(jq -r '.gateway_port // 18789' "$OPTIONS_FILE")
 
 export TZ="$TZNAME"
@@ -175,6 +174,8 @@ cfg_path.parent.mkdir(parents=True, exist_ok=True)
 cfg = {
   "gateway": {
     "mode": "local",
+    "port": 18789,
+    "bind": "loopback",
     "auth": {
       "mode": "token",
       "token": secrets.token_urlsafe(24)
@@ -201,9 +202,9 @@ fi
 
 if [ -f "$OPENCLAW_CONFIG_PATH" ]; then
   if [ -f "$HELPER_PATH" ]; then
-    if ! python3 "$HELPER_PATH" apply-lan-mode "$GATEWAY_LAN_MODE" "$GATEWAY_BIND_IP" "$GATEWAY_PORT"; then
+    if ! python3 "$HELPER_PATH" apply-bind-mode "$GATEWAY_BIND_MODE" "$GATEWAY_PORT"; then
       rc=$?
-      echo "ERROR: Failed to apply gateway LAN mode via oc_config_helper.py (exit code ${rc})."
+      echo "ERROR: Failed to apply gateway bind mode via oc_config_helper.py (exit code ${rc})."
       echo "ERROR: Gateway bind configuration may be incorrect; aborting startup."
       exit "${rc}"
     fi
