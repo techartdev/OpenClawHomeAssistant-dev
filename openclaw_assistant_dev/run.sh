@@ -27,6 +27,11 @@ ROUTER_KEY=$(jq -r '.router_ssh_key_path // "/data/keys/router_ssh"' "$OPTIONS_F
 CLEAN_LOCKS_ON_START=$(jq -r '.clean_session_locks_on_start // true' "$OPTIONS_FILE")
 CLEAN_LOCKS_ON_EXIT=$(jq -r '.clean_session_locks_on_exit // true' "$OPTIONS_FILE")
 
+# Gateway LAN mode toggle (default false for security)
+GATEWAY_LAN_MODE=$(jq -r '.gateway_lan_mode // false' "$OPTIONS_FILE")
+GATEWAY_BIND_IP=$(jq -r '.gateway_bind_ip // "0.0.0.0"' "$OPTIONS_FILE")
+GATEWAY_PORT=$(jq -r '.gateway_port // 18789' "$OPTIONS_FILE")
+
 export TZ="$TZNAME"
 
 # Reduce risk of secrets ending up in logs
@@ -180,6 +185,35 @@ cfg = {
 cfg_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding='utf-8')
 print("INFO: Wrote minimal OpenClaw config (gateway.mode=local, auth.token generated)")
 PY
+fi
+
+# ------------------------------------------------------------------------------
+# Apply gateway LAN mode settings safely using helper script
+# This updates gateway.bind and gateway.port without touching other settings
+# ------------------------------------------------------------------------------
+export OPENCLAW_CONFIG_PATH="/config/.openclaw/openclaw.json"
+
+# Find the helper script (copied to root in Dockerfile, or fallback to add-on dir)
+HELPER_PATH="/oc_config_helper.py"
+if [ ! -f "$HELPER_PATH" ] && [ -f "$(dirname "$0")/oc_config_helper.py" ]; then
+  HELPER_PATH="$(dirname "$0")/oc_config_helper.py"
+fi
+
+if [ -f "$OPENCLAW_CONFIG_PATH" ]; then
+  if [ -f "$HELPER_PATH" ]; then
+    if ! python3 "$HELPER_PATH" apply-lan-mode "$GATEWAY_LAN_MODE" "$GATEWAY_BIND_IP" "$GATEWAY_PORT"; then
+      rc=$?
+      echo "ERROR: Failed to apply gateway LAN mode via oc_config_helper.py (exit code ${rc})."
+      echo "ERROR: Gateway bind configuration may be incorrect; aborting startup."
+      exit "${rc}"
+    fi
+  else
+    echo "WARN: oc_config_helper.py not found, cannot apply gateway settings"
+    echo "INFO: Ensure the add-on image includes oc_config_helper.py and restart"
+  fi
+else
+  echo "WARN: OpenClaw config not found at $OPENCLAW_CONFIG_PATH, cannot apply gateway settings"
+  echo "INFO: Run 'openclaw onboard' first, then restart the add-on"
 fi
 
 echo "Starting OpenClaw Assistant gateway (openclaw)..."
