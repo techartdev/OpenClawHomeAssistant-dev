@@ -4,6 +4,7 @@ FROM ${BUILD_FROM}
 # Base image is Debian Bookworm (glibc). This avoids musl-related native module issues
 # that occur on Alpine (e.g. clipboard, node-llama-cpp).
 
+# Install base packages (without nodejs/npm - we'll get Node 22 from NodeSource)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     git \
@@ -17,8 +18,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     file \
     python3 \
     nginx \
-    nodejs \
-    npm \
+    gnupg \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 22 LTS from NodeSource (Debian Bookworm ships Node 18, but OpenClaw requires 20+)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+ && apt-get install -y nodejs \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
