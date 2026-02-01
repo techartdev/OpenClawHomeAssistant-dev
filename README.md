@@ -20,7 +20,7 @@ Use this repo if you:
 Home Assistant → Settings → Add-ons → Add-on store → ⋮ → Repositories → add:
 - `https://github.com/techartdev/OpenClawHomeAssistant-dev`
 
-Then install **OpenClaw Assistant**.
+Then install **OpenClaw Assistant (DEV)**.
 
 ## Docs
 

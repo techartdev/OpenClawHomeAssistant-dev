@@ -132,7 +132,7 @@ This allows using the Control UI over LAN HTTP.
 
 ## 5) Add-on options (custom / HA-specific)
 
-This add-on intentionally keeps options minimal. See `openclaw_assistant/config.yaml`.
+This add-on intentionally keeps options minimal. See `openclaw_assistant_dev/config.yaml` (DEV repo).
 
 ### Terminal
 - `enable_terminal` (default **true**)
