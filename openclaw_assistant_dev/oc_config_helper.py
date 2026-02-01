@@ -18,8 +18,9 @@ IPV4_REGEX = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')
 
 def is_valid_ip(ip: str) -> bool:
     """Validate IPv4 address format."""
-    if not ip or ip == "0.0.0.0":
-        return True  # 0.0.0.0 is valid (bind all interfaces)
+    if not ip:
+        # Treat empty IP as "no override configured" and consider it acceptable.
+        return True
     
     if not IPV4_REGEX.match(ip):
         return False
