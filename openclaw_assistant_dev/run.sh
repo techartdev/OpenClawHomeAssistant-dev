@@ -201,7 +201,12 @@ fi
 
 if [ -f "$OPENCLAW_CONFIG_PATH" ]; then
   if [ -f "$HELPER_PATH" ]; then
-    python3 "$HELPER_PATH" apply-lan-mode "$GATEWAY_LAN_MODE" "$GATEWAY_BIND_IP" "$GATEWAY_PORT"
+    if ! python3 "$HELPER_PATH" apply-lan-mode "$GATEWAY_LAN_MODE" "$GATEWAY_BIND_IP" "$GATEWAY_PORT"; then
+      rc=$?
+      echo "ERROR: Failed to apply gateway LAN mode via oc_config_helper.py (exit code ${rc})."
+      echo "ERROR: Gateway bind configuration may be incorrect; aborting startup."
+      exit "${rc}"
+    fi
   else
     echo "WARN: oc_config_helper.py not found, cannot apply gateway settings"
     echo "INFO: Ensure the add-on image includes oc_config_helper.py and restart"
