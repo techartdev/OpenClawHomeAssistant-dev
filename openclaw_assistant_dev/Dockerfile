@@ -1,12 +1,10 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:14.0.2
+ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.2.5
 FROM ${BUILD_FROM}
 
 # Base image is Alpine (HA add-ons base). We install Node.js from Alpine edge.
 # This avoids arch-specific manual Node downloads (needed for ARM/aarch64).
 
 RUN apk add --no-cache \
-    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
-    --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community \
     bash \
     git \
     openssh-client \
@@ -24,10 +22,10 @@ RUN apk add --no-cache \
     python3 \
     nginx \
     ttyd \
-    nodejs-current \
+    nodejs \
     npm
 
-# Node.js is installed from Alpine edge (nodejs-current + npm) above.
+# Node.js LTS installed from Alpine 3.21 repos.
 RUN node -v && npm -v
 
 # Install OpenClaw globally
