@@ -189,7 +189,7 @@ GW_PID=$!
 # Start web terminal (optional)
 if [ "$ENABLE_TERMINAL" = "true" ]; then
   echo "Starting web terminal (ttyd) on 127.0.0.1:7681 ..."
-  ttyd -i 127.0.0.1 -p 7681 -b /terminal bash &
+  ttyd -W -i 127.0.0.1 -p 7681 -b /terminal bash &
   TTYD_PID=$!
 else
   echo "Terminal disabled (enable_terminal=false)"
