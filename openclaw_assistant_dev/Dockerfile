@@ -1,10 +1,10 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.2.5
+ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Base image is Alpine (HA add-ons base). We install Node.js from Alpine edge.
-# This avoids arch-specific manual Node downloads (needed for ARM/aarch64).
+# Base image is Debian Bookworm (glibc). This avoids musl-related native module issues
+# that occur on Alpine (e.g. clipboard, node-llama-cpp).
 
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     git \
     openssh-client \
@@ -13,27 +13,26 @@ RUN apk add --no-cache \
     jq \
     curl \
     tar \
-    xz \
-    libstdc++ \
-    libgcc \
-    libatomic \
+    xz-utils \
     file \
-    pax-utils \
     python3 \
     nginx \
-    ttyd \
     nodejs \
-    npm
+    npm \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-# Node.js LTS installed from Alpine 3.21 repos.
+# Install ttyd (web terminal) - not in Debian repos, download binary
+ARG TARGETARCH
+RUN ARCH=$(echo ${TARGETARCH:-$(dpkg --print-architecture)} | sed 's/aarch64/arm64/;s/armv7/armhf/;s/amd64/x86_64/') \
+ && curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${ARCH}" -o /usr/local/bin/ttyd \
+ && chmod +x /usr/local/bin/ttyd
+
 RUN node -v && npm -v
 
 # Install OpenClaw globally
 RUN npm config set fund false && npm config set audit false \
- && npm install -g openclaw@2026.1.29 \
- # Workaround for platforms where @mariozechner/clipboard native prebuilds are missing
- # (e.g. aarch64 Alpine/musl on Raspberry Pi). Clipboard is optional for the HA add-on.
- && node -e "const fs=require('fs'); const p='/usr/local/lib/node_modules/openclaw/node_modules/@mariozechner/clipboard/index.js'; if(!fs.existsSync(p)){process.exit(0)}; let s=fs.readFileSync(p,'utf8'); const needle=`if (!nativeBinding) {\n  if (loadError) {\n    throw loadError\n  }\n  throw new Error(\`Failed to load native binding\`)\n}\n`; if(s.includes('PapurHa-clipboard-fallback')){process.exit(0)}; if(!s.includes(needle)){console.error('Unexpected clipboard index.js format; cannot patch'); process.exit(1)}; const repl=`if (!nativeBinding) {\n  // PapurHa-clipboard-fallback: In the HA add-on we can run headless.\n  // If native clipboard bindings are unavailable (common on some musl/ARM builds),\n  // fall back to no-op implementations so OpenClaw can still start.\n  nativeBinding = {\n    availableFormats: () => [],\n    getText: async () => '',\n    setText: async () => {},\n    hasText: async () => false,\n    getImageBinary: async () => null,\n    getImageBase64: async () => null,\n    setImageBinary: async () => {},\n    setImageBase64: async () => {},\n    hasImage: async () => false,\n    getHtml: async () => null,\n    setHtml: async () => {},\n    hasHtml: async () => false,\n    getRtf: async () => null,\n    setRtf: async () => {},\n    hasRtf: async () => false,\n    clear: async () => {},\n    watch: () => ({ close: () => {} }),\n    callThreadsafeFunction: () => {}\n  }\n}\n`; s=s.replace(needle,repl); fs.writeFileSync(p,s); console.log('Patched clipboard fallback:',p);"
+ && npm install -g openclaw@2026.1.30
 
 COPY run.sh /run.sh
 COPY nginx.conf.tpl /etc/nginx/nginx.conf.tpl
