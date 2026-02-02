@@ -5,8 +5,14 @@
 REAL_BREW="/home/linuxbrew/.linuxbrew/bin/brew"
 
 if [ "$(id -u)" = "0" ]; then
-    # Running as root - use su to run as linuxbrew
-    exec su -s /bin/bash linuxbrew -c "\"$REAL_BREW\" $*"
+    # Running as root - use sudo to run as linuxbrew user
+    # Preserve necessary environment variables and properly pass all arguments
+    exec sudo -u linuxbrew \
+        HOMEBREW_NO_AUTO_UPDATE="${HOMEBREW_NO_AUTO_UPDATE:-1}" \
+        HOMEBREW_NO_ANALYTICS="${HOMEBREW_NO_ANALYTICS:-1}" \
+        HOME="/home/linuxbrew" \
+        PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH" \
+        "$REAL_BREW" "$@"
 else
     # Not root - run directly
     exec "$REAL_BREW" "$@"
