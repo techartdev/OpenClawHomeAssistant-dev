@@ -30,6 +30,7 @@ CLEAN_LOCKS_ON_EXIT=$(jq -r '.clean_session_locks_on_exit // true' "$OPTIONS_FIL
 # Gateway bind mode (loopback or lan)
 GATEWAY_BIND_MODE=$(jq -r '.gateway_bind_mode // "loopback"' "$OPTIONS_FILE")
 GATEWAY_PORT=$(jq -r '.gateway_port // 18789' "$OPTIONS_FILE")
+ALLOW_INSECURE_AUTH=$(jq -r '.allow_insecure_auth // false' "$OPTIONS_FILE")
 
 export TZ="$TZNAME"
 
@@ -202,10 +203,10 @@ fi
 
 if [ -f "$OPENCLAW_CONFIG_PATH" ]; then
   if [ -f "$HELPER_PATH" ]; then
-    if ! python3 "$HELPER_PATH" apply-bind-mode "$GATEWAY_BIND_MODE" "$GATEWAY_PORT"; then
+    if ! python3 "$HELPER_PATH" apply-gateway-settings "$GATEWAY_BIND_MODE" "$GATEWAY_PORT" "$ALLOW_INSECURE_AUTH"; then
       rc=$?
-      echo "ERROR: Failed to apply gateway bind mode via oc_config_helper.py (exit code ${rc})."
-      echo "ERROR: Gateway bind configuration may be incorrect; aborting startup."
+      echo "ERROR: Failed to apply gateway settings via oc_config_helper.py (exit code ${rc})."
+      echo "ERROR: Gateway configuration may be incorrect; aborting startup."
       exit "${rc}"
     fi
   else

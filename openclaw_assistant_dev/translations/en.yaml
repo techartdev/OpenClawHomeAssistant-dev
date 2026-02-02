@@ -42,3 +42,7 @@ configuration:
   gateway_port:
     name: Gateway Port
     description: Port number for the OpenClaw gateway to listen on (default - 18789)
+  
+  allow_insecure_auth:
+    name: Allow Insecure HTTP Auth
+    description: Allow HTTP authentication for gateway access on LAN. WARNING - Only enable if using HTTP (not HTTPS) for gateway_public_url. Required for browser access over HTTP.

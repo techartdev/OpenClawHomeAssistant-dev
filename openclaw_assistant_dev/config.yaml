@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.36"
+version: "0.5.37"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -56,6 +56,11 @@ options:
   # Gateway port to listen on
   gateway_port: 18789
 
+  # Allow insecure HTTP authentication (required for HTTP gateway access on LAN)
+  # WARNING: Only enable if you're using HTTP (not HTTPS) for gateway_public_url
+  # Default is false for security.
+  allow_insecure_auth: false
+
 
 schema:
   timezone: str
@@ -71,4 +76,5 @@ schema:
   clean_session_locks_on_exit: bool?
   gateway_bind_mode: list(loopback|lan)?
   gateway_port: int(1,65535)?
+  allow_insecure_auth: bool?
 
