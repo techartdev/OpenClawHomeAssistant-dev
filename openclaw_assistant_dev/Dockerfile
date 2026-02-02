@@ -54,13 +54,17 @@ USER linuxbrew
 RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 USER root
 
-# Add Homebrew to PATH for all users
-ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
+# Add Homebrew to PATH for all users (wrapper comes first to intercept root calls)
+ENV PATH="/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
+
+# Copy brew wrapper that allows root to run brew by delegating to linuxbrew user
+COPY brew-wrapper.sh /usr/local/bin/brew
+RUN chmod +x /usr/local/bin/brew
 
 # Verify brew is available and install gcc (needed for compiling some brew packages)
 # Must run as linuxbrew user - Homebrew refuses to run as root
 USER linuxbrew
-RUN brew --version && brew install gcc
+RUN /home/linuxbrew/.linuxbrew/bin/brew --version && /home/linuxbrew/.linuxbrew/bin/brew install gcc
 USER root
 
 # Install OpenClaw globally
