@@ -58,7 +58,10 @@ USER root
 ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
 
 # Verify brew is available and install gcc (needed for compiling some brew packages)
+# Must run as linuxbrew user - Homebrew refuses to run as root
+USER linuxbrew
 RUN brew --version && brew install gcc
+USER root
 
 # Install OpenClaw globally
 RUN npm config set fund false && npm config set audit false \
