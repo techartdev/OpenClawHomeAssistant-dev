@@ -83,11 +83,13 @@ def apply_gateway_settings(bind_mode: str, port: int, allow_insecure_auth: bool)
     if "gateway" not in cfg:
         cfg["gateway"] = {}
     
-    if "controlUi" not in cfg:
-        cfg["controlUi"] = {}
-    
     gateway = cfg["gateway"]
-    control_ui = cfg["controlUi"]
+    
+    # controlUi should be nested inside gateway
+    if "controlUi" not in gateway:
+        gateway["controlUi"] = {}
+    
+    control_ui = gateway["controlUi"]
     
     current_bind = gateway.get("bind", "")
     current_port = gateway.get("port", 18789)
