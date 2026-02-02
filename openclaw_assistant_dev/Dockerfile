@@ -40,6 +40,26 @@ RUN ARCH=$(echo ${TARGETARCH:-$(dpkg --print-architecture)} | sed 's|arm64|aarch
 
 RUN node -v && npm -v
 
+# Install Homebrew (Linuxbrew) for OpenClaw skill dependencies
+# Homebrew is required for installing CLI tools like gemini, aider, etc.
+ENV HOMEBREW_NO_AUTO_UPDATE=1 \
+    HOMEBREW_NO_INSTALL_CLEANUP=1 \
+    HOMEBREW_NO_ANALYTICS=1
+
+RUN useradd -m -s /bin/bash linuxbrew \
+ && mkdir -p /home/linuxbrew/.linuxbrew \
+ && chown -R linuxbrew:linuxbrew /home/linuxbrew
+
+USER linuxbrew
+RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+USER root
+
+# Add Homebrew to PATH for all users
+ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
+
+# Verify brew is available and install gcc (needed for compiling some brew packages)
+RUN brew --version && brew install gcc
+
 # Install OpenClaw globally
 RUN npm config set fund false && npm config set audit false \
  && npm install -g openclaw@2026.1.30

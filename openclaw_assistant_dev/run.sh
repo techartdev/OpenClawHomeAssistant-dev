@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Ensure Homebrew and brew-installed binaries are in PATH
+# This is needed for OpenClaw skills that depend on CLI tools (gemini, aider, etc.)
+export PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
+
 # Home Assistant add-on options are usually rendered to /data/options.json
 OPTIONS_FILE="/data/options.json"
 
