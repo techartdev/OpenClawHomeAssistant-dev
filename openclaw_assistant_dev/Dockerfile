@@ -52,7 +52,10 @@ RUN useradd -m -s /bin/bash linuxbrew \
  && chown -R linuxbrew:linuxbrew /home/linuxbrew
 
 USER linuxbrew
-RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
+ && cd /home/linuxbrew/.linuxbrew/Homebrew \
+ && git config --global --add safe.directory /home/linuxbrew/.linuxbrew/Homebrew \
+ && /home/linuxbrew/.linuxbrew/bin/brew update --force
 USER root
 
 # Add Homebrew to PATH for all users (wrapper comes first to intercept root calls)
@@ -70,7 +73,7 @@ USER root
 
 # Install OpenClaw globally
 RUN npm config set fund false && npm config set audit false \
- && npm install -g openclaw@2026.1.30
+ && npm install -g openclaw@2026.2.1
 
 COPY run.sh /run.sh
 COPY oc_config_helper.py /oc_config_helper.py
