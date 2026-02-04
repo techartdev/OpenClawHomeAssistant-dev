@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     build-essential \
     sudo \
+    vim \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

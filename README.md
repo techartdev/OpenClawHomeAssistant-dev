@@ -22,6 +22,41 @@ Home Assistant → Settings → Add-ons → Add-on store → ⋮ → Repositorie
 
 Then install **OpenClaw Assistant (DEV)**.
 
+## Features
+
+### Browser Automation (Chromium)
+
+This add-on includes **Chromium** for website automation tasks. OpenClaw can use it for browser-based skills and automation.
+
+#### Configuration
+
+OpenClaw's browser tool uses its own control service/protocol. Configure it in one of two ways:
+
+**Option 1: Via `openclaw.json`**
+
+Add to `/config/.openclaw/openclaw.json`:
+
+```json
+{
+  "browser": {
+    "enabled": true,
+    "headless": true,
+    "noSandbox": true,
+    "cdpUrl": "http://127.0.0.1:9222"
+  }
+}
+```
+
+**Option 2: Via Gateway Flags**
+
+Start OpenClaw gateway with browser flags:
+
+```bash
+openclaw gateway --browser-headless --browser-no-sandbox
+```
+
+**Note:** The `noSandbox` flag is required in Docker containers due to security restrictions.
+
 ## Docs
 
 For full documentation, see the stable repo docs (kept in sync as best-effort):
