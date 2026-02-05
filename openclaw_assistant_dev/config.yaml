@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.51"
+version: "0.5.52"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -27,6 +27,9 @@ options:
 
   # Enable web terminal inside Home Assistant (Ingress) via ttyd
   enable_terminal: true
+
+  # Terminal port (change if 7681 conflicts with another service)
+  terminal_port: 7681
 
   # Public base URL for opening the Gateway Web UI in a new tab (not embedded).
   # Recommended: NO trailing slash.
@@ -65,6 +68,7 @@ options:
 schema:
   timezone: str
   enable_terminal: bool?
+  terminal_port: int(1024,65535)?
   gateway_public_url: str?
   homeassistant_token: str?
 
