@@ -153,14 +153,21 @@ This allows using the Control UI over LAN HTTP.
 This add-on keeps options minimal but practical. See `openclaw_assistant_dev/config.yaml` for the full schema.
 
 ### Gateway Network Settings
-Control how the OpenClaw gateway binds to the network:
+Control how the OpenClaw gateway operates and binds to the network:
+
+- **`gateway_mode`** (string: **local** or **remote**, default **local**)
+  - **local**: Run the gateway locally in this add-on (recommended for most users)
+  - **remote**: Connect to a remote gateway running elsewhere
+  - This setting determines whether OpenClaw runs its own gateway or connects to an existing one
 
 - **`gateway_bind_mode`** (string: **loopback** or **lan**, default **loopback**)
   - **loopback**: Bind to 127.0.0.1 only — secure, local access only
   - **lan**: Bind to all interfaces — accessible from your local network
+  - Only applies when `gateway_mode` is **local**
 
 - **`gateway_port`** (int, default **18789**)
   - Port number for the gateway to listen on
+  - Only applies when `gateway_mode` is **local**
 
 - **`allow_insecure_auth`** (bool, default **false**)
   - Allow HTTP authentication for gateway access on LAN
