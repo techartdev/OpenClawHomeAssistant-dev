@@ -211,6 +211,23 @@ How to provide the key:
 
 ## Troubleshooting
 
+### Some skills fail to install (Homebrew errors)
+
+If you see errors like:
+- `Homebrew's x86_64 support on Linux requires a CPU with SSSE3 support!`
+- `spawn brew ENOENT` or `brew: command not found`
+
+**Cause**: Your CPU doesn't support SSSE3 instructions (required by Homebrew). This affects older CPUs like some Intel Atom, Celeron, or pre-2006 processors.
+
+**Impact**: Skills that depend on CLI tools installed via Homebrew (e.g., `gemini`, `aider`) won't install. Core OpenClaw functionality still works.
+
+**Solutions**:
+1. **Use a newer CPU** with SSSE3 support (Intel Core 2 or newer, ~2006+)
+2. **Install dependencies manually** if you know which tools are needed
+3. **Use alternative skills** that don't require Homebrew dependencies
+
+The add-on will still start and work - Homebrew is optional.
+
 ### I get ERR_CONNECTION_REFUSED
 - The gateway is not reachable at that IP/port.
 - Confirm bind/port in terminal:
