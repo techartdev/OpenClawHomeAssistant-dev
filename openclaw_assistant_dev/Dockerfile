@@ -43,6 +43,9 @@ RUN ARCH=$(echo ${TARGETARCH:-$(dpkg --print-architecture)} | sed 's|arm64|aarch
 
 RUN node -v && npm -v
 
+# Install pnpm globally (required by some OpenClaw skills like clawhub)
+RUN npm install -g pnpm && pnpm -v
+
 # Install Chromium for website automation tasks
 # Includes necessary dependencies for headless browser operation
 RUN apt-get update && apt-get install -y --no-install-recommends \
