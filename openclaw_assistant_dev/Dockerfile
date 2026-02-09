@@ -1,4 +1,35 @@
+# Global ARG for Home Assistant base image (must be before first FROM that uses it)
 ARG BUILD_FROM
+
+###############################################################################
+# Signal-CLI Build Stage
+###############################################################################
+FROM eclipse-temurin:25-jdk AS signal-cli-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends git zip curl \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /signal-cli
+RUN git clone --depth 1 https://github.com/AsamK/signal-cli.git .
+RUN ./gradlew installDist
+
+# Patch libsignal-client jar with native library for current architecture
+# The upstream jar only includes x86_64 Linux .so, so we need to add aarch64 support
+# Native libs from: https://github.com/exquo/signal-libs-build
+ARG TARGETARCH
+RUN LIBSIGNAL_VERSION=$(ls build/install/signal-cli/lib/libsignal-client-*.jar | grep -oP '\d+\.\d+\.\d+') && \
+    echo "Detected libsignal-client version: ${LIBSIGNAL_VERSION}" && \
+    if [ "${TARGETARCH}" = "arm64" ]; then \
+      echo "Downloading aarch64 native library from exquo/signal-libs-build..." && \
+      curl -fsSL "https://github.com/exquo/signal-libs-build/releases/download/libsignal_v${LIBSIGNAL_VERSION}/libsignal_jni.so-v${LIBSIGNAL_VERSION}-aarch64-unknown-linux-gnu.tar.gz" -o /tmp/libsignal.tar.gz && \
+      tar -xzf /tmp/libsignal.tar.gz -C /tmp && \
+      zip -uj build/install/signal-cli/lib/libsignal-client-${LIBSIGNAL_VERSION}.jar /tmp/libsignal_jni.so && \
+      rm /tmp/libsignal.tar.gz /tmp/libsignal_jni.so; \
+    fi
+
+###############################################################################
+# Main Build Stage
+###############################################################################
 FROM ${BUILD_FROM}
 
 # Base image is Debian Bookworm (glibc). This avoids musl-related native module issues
@@ -94,6 +125,15 @@ RUN if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then \
         echo "Skipping gcc installation - Homebrew not available"; \
     fi
 USER root
+
+###############################################################################
+# Signal-CLI Runtime
+###############################################################################
+# Copy signal-cli and Java 25 runtime from builder stage
+COPY --from=signal-cli-builder /opt/java/openjdk /opt/java
+COPY --from=signal-cli-builder /signal-cli/build/install/signal-cli /opt/signal-cli
+ENV JAVA_HOME="/opt/java"
+ENV PATH="/opt/signal-cli/bin:/opt/java/bin:${PATH}"
 
 # Install OpenClaw globally
 RUN npm config set fund false && npm config set audit false \
