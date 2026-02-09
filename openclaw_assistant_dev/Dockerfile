@@ -24,6 +24,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     vim \
     nano \
+    fd-find \
+    ripgrep \
+    bat \
+    less \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -98,6 +102,23 @@ USER root
 # Install OpenClaw globally
 RUN npm config set fund false && npm config set audit false \
  && npm install -g openclaw@2026.2.6-3
+
+# Shell aliases and color options for interactive use
+RUN { \
+      echo ''; \
+      echo '# Aliases'; \
+      echo 'alias bat="batcat"'; \
+      echo 'alias fd="fdfind"'; \
+      echo ''; \
+      echo '# Enable colors'; \
+      echo 'alias ls="ls --color=auto"'; \
+      echo 'alias grep="grep --color=auto"'; \
+      echo 'alias egrep="egrep --color=auto"'; \
+      echo 'alias fgrep="fgrep --color=auto"'; \
+      echo 'alias diff="diff --color=auto"'; \
+      echo 'alias ip="ip --color=auto"'; \
+      echo 'export LS_COLORS="di=1;34:ln=1;36:so=1;35:pi=33:ex=1;32:bd=1;33:cd=1;33:su=1;31:sg=1;31:tw=1;34:ow=1;34"'; \
+    } >> /etc/bash.bashrc
 
 COPY run.sh /run.sh
 COPY oc_config_helper.py /oc_config_helper.py
