@@ -4,6 +4,7 @@ ARG BUILD_FROM
 ###############################################################################
 # Signal-CLI Build Stage
 ###############################################################################
+FROM eclipse-temurin:25-jre AS java-runtime
 FROM eclipse-temurin:25-jdk AS signal-cli-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends git zip curl \
@@ -129,8 +130,8 @@ USER root
 ###############################################################################
 # Signal-CLI Runtime
 ###############################################################################
-# Copy signal-cli and Java 25 runtime from builder stage
-COPY --from=signal-cli-builder /opt/java/openjdk /opt/java
+# Copy signal-cli distribution and JRE (not the full JDK) for runtime
+COPY --from=java-runtime /opt/java/openjdk /opt/java
 COPY --from=signal-cli-builder /signal-cli/build/install/signal-cli /opt/signal-cli
 ENV JAVA_HOME="/opt/java"
 ENV PATH="/opt/signal-cli/bin:/opt/java/bin:${PATH}"
