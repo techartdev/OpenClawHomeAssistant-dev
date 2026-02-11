@@ -69,12 +69,13 @@ mkdir -p /config/.openclaw /config/clawd /config/keys /config/secrets
 
 # ------------------------------------------------------------------------------
 # Sync built-in OpenClaw skills from image to persistent storage
-# IMPORTANT: This must run BEFORE changing npm prefix, so npm root -g returns
-# the real image path (e.g. /usr/lib/node_modules), not the redirected one.
 # On each startup, copy new/updated built-in skills so they survive rebuilds.
 # We sync them to /config/.openclaw/skills and symlink back.
+# NOTE: We cannot use `npm root -g` here because HOME=/config may contain a
+# persisted .npmrc with a custom prefix from a previous run. Instead, we
+# resolve the real image path by temporarily overriding HOME.
 # ------------------------------------------------------------------------------
-IMAGE_SKILLS_DIR="$(npm root -g 2>/dev/null)/openclaw/skills"
+IMAGE_SKILLS_DIR="$(HOME=/root npm root -g 2>/dev/null)/openclaw/skills"
 PERSISTENT_SKILLS_DIR="/config/.openclaw/skills"
 
 if [ -d "$IMAGE_SKILLS_DIR" ] && [ ! -L "$IMAGE_SKILLS_DIR" ]; then
