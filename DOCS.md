@@ -260,8 +260,10 @@ Copy the token — you'll need it as the API key.
 2. Search for **Extended OpenAI Conversation**
 3. Configure:
    - **API Key**: Paste your gateway token
-   - **Base URL**: `http://127.0.0.1:18789/v1`
-   - **Model**: `openclaw:main` (or any agent ID, e.g., `openclaw:beta`)
+   - **Base URL**: `http://127.0.0.1:18789/v1` or a LAN url if you use `gateway_bind_mode: lan`
+   - **Api Version**: leave empty
+   - **Organization**: leave empty
+   - **Skip Authentication**: **true**
 
 ### Step 5 — Set as Conversation Agent
 
