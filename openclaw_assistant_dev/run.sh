@@ -296,8 +296,12 @@ if [ -f "$NGINX_PID_FILE" ]; then
 fi
 # Also kill any orphaned nginx workers that might hold port 8099
 if command -v pkill >/dev/null 2>&1; then
-  pkill -f "nginx: master" 2>/dev/null || true
+  pkill -f "nginx.*-c /etc/nginx/nginx.conf" 2>/dev/null || true
   sleep 1
+fi
+# Verify port 8099 is actually free before proceeding
+if command -v ss >/dev/null 2>&1 && ss -tlnp 2>/dev/null | grep -q ':8099 '; then
+  echo "WARN: Port 8099 still in use after cleanup; nginx may fail to start"
 fi
 
 # Render nginx config from template.
@@ -342,8 +346,13 @@ PY
 echo "Starting ingress proxy (nginx) on :8099 ..."
 nginx -g 'daemon off;' &
 NGINX_PID=$!
-echo "$NGINX_PID" > "$NGINX_PID_FILE"
-echo "nginx started with PID $NGINX_PID"
+sleep 1
+if kill -0 "$NGINX_PID" 2>/dev/null; then
+  echo "$NGINX_PID" > "$NGINX_PID_FILE"
+  echo "nginx started with PID $NGINX_PID"
+else
+  echo "WARN: nginx failed to start (PID $NGINX_PID exited); ingress UI may be unavailable"
+fi
 
 # Wait for gateway; if it exits, shut down others.
 wait "${GW_PID}"
