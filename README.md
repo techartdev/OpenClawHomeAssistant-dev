@@ -1,63 +1,38 @@
-# OpenClaw Assistant – Home Assistant Add-on (DEV / Experimental)
+# OpenClaw Assistant – Home Assistant Add-on (DEV)
 
-This repository is the **DEV / experimental channel** for the OpenClaw Home Assistant add-on.
+Run [OpenClaw](https://github.com/openclaw/openclaw) as a Home Assistant add-on — fully self-contained with a web terminal, AI gateway, and all dependencies included.
 
-- It may contain **breaking changes**.
-- It may be **unstable**.
-- Updates may be pushed more frequently.
+> **This is the DEV / experimental channel.** It may contain breaking changes and is updated more frequently. For the stable release, use: [techartdev/OpenClawHomeAssistant](https://github.com/techartdev/OpenClawHomeAssistant)
 
-If you want the stable/released add-on, use the main repo instead:
-- https://github.com/techartdev/OpenClawHomeAssistant
+## Quick Start
 
-## What this repo is for
+1. **Add the repository**: Settings → Add-ons → Add-on store → ⋮ → Repositories → paste:
+   ```
+   https://github.com/techartdev/OpenClawHomeAssistant-dev
+   ```
+2. **Install** OpenClaw Assistant (DEV)
+3. **Start** the add-on
+4. **Open** the add-on page — you'll see a terminal
+5. **Run** `openclaw onboard` in the terminal to set up your AI providers
 
-Use this repo if you:
-- want to test new features/fixes before they go to stable
-- want to help validate changes on different hardware (e.g. Raspberry Pi / ARM)
+## Key Features
 
-## How to install
+- **AI Gateway** — OpenClaw server with chat, skills, and automation capabilities
+- **Web Terminal** — browser-based terminal embedded in Home Assistant
+- **Assist Pipeline** — use OpenClaw as a conversation agent via the OpenAI-compatible API
+- **Browser Automation** — Chromium included for web scraping and automation skills
+- **Persistent Storage** — skills, config, and workspace survive add-on updates
+- **Bundled Tools** — git, vim, nano, bat, fd, ripgrep, curl, jq, python3, pnpm, Homebrew
 
-Home Assistant → Settings → Add-ons → Add-on store → ⋮ → Repositories → add:
-- `https://github.com/techartdev/OpenClawHomeAssistant-dev`
+## Supported Architectures
 
-Then install **OpenClaw Assistant (DEV)**.
+| Architecture | Supported |
+|---|---|
+| amd64 | ✅ |
+| aarch64 (RPi 4/5) | ✅ |
+| armv7 (RPi 3) | ✅ |
 
-## Features
+## Documentation
 
-### Browser Automation (Chromium)
-
-This add-on includes **Chromium** for website automation tasks. OpenClaw can use it for browser-based skills and automation.
-
-#### Configuration
-
-OpenClaw's browser tool uses its own control service/protocol. Configure it in one of two ways:
-
-**Option 1: Via `openclaw.json`**
-
-Add to `/config/.openclaw/openclaw.json`:
-
-```json
-{
-  "browser": {
-    "enabled": true,
-    "headless": true,
-    "noSandbox": true,
-    "cdpUrl": "http://127.0.0.1:9222"
-  }
-}
-```
-
-**Option 2: Via Gateway Flags**
-
-Start OpenClaw gateway with browser flags:
-
-```bash
-openclaw gateway --browser-headless --browser-no-sandbox
-```
-
-**Note:** The `noSandbox` flag is required in Docker containers due to security restrictions.
-
-## Docs
-
-For full documentation, see the stable repo docs (kept in sync as best-effort):
-- https://github.com/techartdev/OpenClawHomeAssistant
+- **[Full documentation →](DOCS.md)** — installation, configuration, use cases, troubleshooting, and more
+- **[Security Risks & Disclaimer →](SECURITY.md)** — important risks to understand before using this add-on
