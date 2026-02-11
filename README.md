@@ -1,5 +1,7 @@
 # OpenClaw Assistant – Home Assistant Add-on (DEV)
 
+## [Join our Discord Server!](https://discord.gg/Nx4H3XmY)
+
 Run [OpenClaw](https://github.com/openclaw/openclaw) as a Home Assistant add-on — fully self-contained with a web terminal, AI gateway, and all dependencies included.
 
 > **This is the DEV / experimental channel.** It may contain breaking changes and is updated more frequently. For the stable release, use: [techartdev/OpenClawHomeAssistant](https://github.com/techartdev/OpenClawHomeAssistant)
