@@ -297,7 +297,7 @@ fi
 # Also kill any orphaned nginx workers that might hold port 8099
 if command -v pkill >/dev/null 2>&1; then
   pkill -f "nginx: master" 2>/dev/null || true
-  sleep 0.5
+  sleep 1
 fi
 
 # Render nginx config from template.
