@@ -341,14 +341,14 @@ if [ -f "$NGINX_PID_FILE" ]; then
   fi
   rm -f "$NGINX_PID_FILE"
 fi
-# Also kill any orphaned nginx workers that might hold port 8099
+# Also kill any orphaned nginx workers that might hold port 48099
 if command -v pkill >/dev/null 2>&1; then
   pkill -f "nginx.*-c /etc/nginx/nginx.conf" 2>/dev/null || true
   sleep 1
 fi
-# Verify port 8099 is actually free before proceeding
-if command -v ss >/dev/null 2>&1 && ss -tlnp 2>/dev/null | grep -q ':8099 '; then
-  echo "WARN: Port 8099 still in use after cleanup; nginx may fail to start"
+# Verify port 48099 is actually free before proceeding
+if command -v ss >/dev/null 2>&1 && ss -tlnp 2>/dev/null | grep -q ':48099 '; then
+  echo "WARN: Port 48099 still in use after cleanup; nginx may fail to start"
 fi
 
 # Render nginx config from template.
@@ -390,7 +390,7 @@ except Exception:
     pass
 PY
 
-echo "Starting ingress proxy (nginx) on :8099 ..."
+echo "Starting ingress proxy (nginx) on :48099 ..."
 nginx -g 'daemon off;' &
 NGINX_PID=$!
 sleep 1

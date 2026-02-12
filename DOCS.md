@@ -29,7 +29,7 @@ The add-on container runs three services:
 | Service | Port | Purpose |
 |---|---|---|
 | **OpenClaw Gateway** | 18789 (configurable) | The AI agent server — handles skills, chat, automations |
-| **nginx** (Ingress proxy) | 8099 (fixed) | Serves the landing page inside Home Assistant |
+| **nginx** (Ingress proxy) | 48099 (fixed) | Serves the landing page inside Home Assistant |
 | **ttyd** (Web terminal) | 7681 (configurable) | Provides a browser-based terminal for setup and management |
 
 When you open the add-on page in Home Assistant, nginx serves a landing page with:
@@ -490,9 +490,9 @@ Then restart the add-on. It will re-bootstrap a fresh configuration.
 
 Go to **Settings → Add-ons → OpenClaw Assistant → Log** tab. Logs show startup messages, errors, and service status.
 
-### Port 8099 conflict (add-on page won't load)
+### Port 48099 conflict (add-on page won't load)
 
-**Symptom**: `bind() to 0.0.0.0:8099 failed (98: Address already in use)` in logs.
+**Symptom**: `bind() to 0.0.0.0:48099 failed (98: Address already in use)` in logs.
 
 **Cause**: A stale nginx process from a previous run is still holding the port. This can happen after a crash or unclean restart.
 
