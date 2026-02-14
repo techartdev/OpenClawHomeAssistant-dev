@@ -47,6 +47,7 @@ When you open the add-on page in Home Assistant, nginx serves a landing page wit
 | `/config/secrets/` | Yes | Tokens (e.g., `homeassistant.token`) |
 | `/config/keys/` | Yes | SSH keys (e.g., router SSH key) |
 | `/config/.linuxbrew/` | Yes | Homebrew install and brew-installed CLI tools |
+| `/config/gogcli/` | Yes | gog OAuth credentials for Google APIs |
 | `/usr/lib/node_modules/openclaw/` | No | OpenClaw installation (rebuilt with each image update) |
 
 > **Important**: Everything under `/config/` persists across add-on updates. The container filesystem (`/usr/`, `/opt/`, etc.) is rebuilt each time the image changes.
@@ -367,6 +368,59 @@ If you have skills or scripts that need SSH access to a router, firewall, or oth
 
 The connection details are also saved to `/config/CONNECTION_NOTES.txt` for reference by scripts.
 
+### 6f. Google Sheets / Google APIs (gog OAuth)
+
+Some OpenClaw skills use [gog](https://github.com/deftdawg/gog) to interact with Google APIs (Sheets, Drive, etc.). Because the add-on runs inside a container, the standard browser-based OAuth flow won't work — the localhost redirect can't reach your PC. Use the **manual** flow instead.
+
+#### Step 1 — Prepare OAuth credentials
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services → Credentials**
+2. Create an **OAuth 2.0 Client ID** (type: **Web application**) or use an existing one
+3. In the client's **Authorized redirect URIs**, add: `http://localhost:1`
+4. Download the client JSON file and copy it into the add-on:
+   ```sh
+   # From your PC, copy the file to the HA config directory
+   # Then in the add-on terminal:
+   mkdir -p /config/secrets
+   # Place the downloaded JSON as:
+   /config/secrets/gmail_oauth_client.json
+   ```
+
+#### Step 2 — Register credentials with gog
+
+```sh
+gog auth credentials /config/secrets/gmail_oauth_client.json
+```
+
+This tells gog where to find your OAuth client configuration.
+
+#### Step 3 — Authorize with `--manual`
+
+```sh
+gog auth add your-email@gmail.com --services sheets --manual
+```
+
+The `--manual` flag avoids the localhost redirect problem. gog will:
+
+1. Print an authorization URL — **open it in your PC's browser**
+2. Sign in with your Google account and grant access
+3. You'll be redirected to a URL starting with `http://localhost:1?...` — the page will fail to load, **that's expected**
+4. **Copy the full URL** from your browser's address bar
+5. Paste it back into the add-on terminal when prompted
+6. If prompted for a **passphrase**, enter one to encrypt the stored token (remember it — you'll need it if gog asks again)
+
+#### Step 4 — Verify
+
+```sh
+gog auth list
+```
+
+You should see your account listed with the `sheets` service.
+
+> **Why `--manual`?** The default OAuth flow starts a temporary HTTP server on localhost to receive the callback. Since the add-on runs on your HA device (not your PC), the browser redirect to `localhost` can't reach the add-on's server. The `--manual` flag skips the local server and lets you paste the redirect URL directly.
+
+> **Persistence**: gog stores credentials under `/config/gogcli/` which is persistent storage — your auth survives add-on updates.
+
 ---
 
 ## 7. Data Persistence & Skills
@@ -383,6 +437,7 @@ The connection details are also saved to `/config/CONNECTION_NOTES.txt` for refe
 | SSH keys | `/config/keys/` | Yes |
 | Tokens | `/config/secrets/` | Yes |
 | Homebrew & brew-installed tools | `/config/.linuxbrew/` | Yes (synced on startup) |
+| gog OAuth credentials | `/config/gogcli/` | Yes |
 | OpenClaw binary | `/usr/lib/node_modules/openclaw/` | **No** — reinstalled from image |
 
 ### How built-in skills work
