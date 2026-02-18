@@ -55,6 +55,10 @@ configuration:
     name: Zezwól na niezabezpieczone uwierzytelnianie HTTP
     description: Zezwól na uwierzytelnianie HTTP dla dostępu do gateway w sieci LAN. UWAGA - Włącz tylko jeśli używasz HTTP (nie HTTPS) dla gateway_public_url. Wymagane dla dostępu przez przeglądarkę przez HTTP.
   
+
+  force_ipv4_dns:
+    name: Force IPv4 DNS Order
+    description: Force IPv4-first DNS ordering for Node network calls. Useful when IPv6 DNS resolves but IPv6 internet routing is broken (can affect Telegram API polling).
   gateway_mode:
     name: Tryb Gateway
     description: Tryb działania gateway - local (uruchom gateway lokalnie, zalecane) lub remote (połącz się ze zdalnym gateway)

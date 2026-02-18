@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.67"
+version: "0.5.68"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -75,6 +75,11 @@ options:
   # Default is false for security.
   allow_insecure_auth: false
 
+  # Force IPv4-first DNS result ordering for Node fetch/network calls.
+  # Useful on networks where IPv6 resolution exists but IPv6 egress is broken
+  # (can affect Telegram API polling in some HAOS/VM setups).
+  force_ipv4_dns: false
+
 
 schema:
   timezone: str
@@ -94,4 +99,5 @@ schema:
   gateway_port: int(1,65535)?
   enable_openai_api: bool?
   allow_insecure_auth: bool?
+  force_ipv4_dns: bool?
 
