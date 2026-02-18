@@ -50,11 +50,23 @@ GATEWAY_BIND_MODE=$(jq -r '.gateway_bind_mode // "loopback"' "$OPTIONS_FILE")
 GATEWAY_PORT=$(jq -r '.gateway_port // 18789' "$OPTIONS_FILE")
 ENABLE_OPENAI_API=$(jq -r '.enable_openai_api // false' "$OPTIONS_FILE")
 ALLOW_INSECURE_AUTH=$(jq -r '.allow_insecure_auth // false' "$OPTIONS_FILE")
+FORCE_IPV4_DNS=$(jq -r '.force_ipv4_dns // false' "$OPTIONS_FILE")
 
 export TZ="$TZNAME"
 
 # Reduce risk of secrets ending up in logs
 set +x
+
+# Optional network hardening/workaround: force IPv4-first DNS ordering for Node.js.
+# Helps in environments where IPv6 resolves but has no working egress.
+if [ "$FORCE_IPV4_DNS" = "true" ] || [ "$FORCE_IPV4_DNS" = "1" ]; then
+  if [ -n "${NODE_OPTIONS:-}" ]; then
+    export NODE_OPTIONS="${NODE_OPTIONS} --dns-result-order=ipv4first"
+  else
+    export NODE_OPTIONS="--dns-result-order=ipv4first"
+  fi
+  echo "INFO: Enabled IPv4-first DNS ordering (NODE_OPTIONS=--dns-result-order=ipv4first)"
+fi
 
 # HA add-ons mount persistent storage at /config (maps to /addon_configs/<slug> on the host).
 export HOME=/config
