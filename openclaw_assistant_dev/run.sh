@@ -356,6 +356,20 @@ if [ -f "$TTYD_PID_FILE" ]; then
 fi
 
 if [ "$ENABLE_TERMINAL" = "true" ] || [ "$ENABLE_TERMINAL" = "1" ]; then
+  # Check if the terminal port is already in use before starting ttyd
+  if command -v ss >/dev/null 2>&1 && ss -tlnp 2>/dev/null | grep -q ":${TERMINAL_PORT} "; then
+    echo ""
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "!!  WARNING: terminal_port ${TERMINAL_PORT} IS ALREADY IN USE  !!"
+    echo "!!                                                             !!"
+    echo "!!  The web terminal (ttyd) could NOT be started because port  !!"
+    echo "!!  ${TERMINAL_PORT} is occupied by another process.           !!"
+    echo "!!                                                             !!"
+    echo "!!  ACTION REQUIRED: Go to Add-on Configuration and change     !!"
+    echo "!!  'terminal_port' to a free port, then restart the add-on.  !!"
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo ""
+  fi
   echo "Starting web terminal (ttyd) on 127.0.0.1:${TERMINAL_PORT} ..."
   ttyd -W -i 127.0.0.1 -p "${TERMINAL_PORT}" -b /terminal bash &
   TTYD_PID=$!
