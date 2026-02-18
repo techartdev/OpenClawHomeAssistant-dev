@@ -203,6 +203,7 @@ All options are set via **Settings → Apps/Add-ons → OpenClaw Assistant → C
 | `gateway_public_url` | string | _(empty)_ | Public URL for the "Open Gateway Web UI" button. Example: `http://192.168.1.119:18789` |
 | `enable_openai_api` | bool | `false` | Enable the OpenAI-compatible `/v1/chat/completions` endpoint. Required for [Assist pipeline integration](#6c-assist-pipeline-integration-openai-api) |
 | `allow_insecure_auth` | bool | `false` | Allow HTTP (non-HTTPS) authentication on LAN. **Required** for browser access over plain HTTP |
+| `force_ipv4_dns` | bool | `false` | Force IPv4-first DNS ordering for Node network calls. Useful if IPv6 DNS resolves but IPv6 egress is broken (can affect Telegram API polling). |
 
 ### Terminal
 
@@ -591,6 +592,19 @@ Paste this token when the UI prompts for authentication, or append it to the URL
 1. Check that `enable_terminal` is **true** in the add-on configuration
 2. Check logs for `Starting web terminal (ttyd)` — if missing, the terminal is disabled
 3. If you see a port conflict error, change `terminal_port` to a different value
+
+### Telegram network errors (`TypeError: fetch failed` / `getUpdates` fails)
+
+If Telegram is configured but polling fails with network fetch errors:
+
+1. In add-on terminal, test IPv4 vs IPv6 explicitly:
+   ```sh
+   curl -4 https://api.telegram.org/bot<token>/getMe
+   curl -6 https://api.telegram.org/bot<token>/getMe
+   ```
+2. If IPv4 works but default/IPv6 fails, set add-on option `force_ipv4_dns: true` and restart.
+3. Keep `channels.telegram.network.autoSelectFamily: false` (default on Node 22).
+4. If still failing, check host/VM IPv6 routing and DNS configuration.
 
 ### Skills disappearing after update
 

@@ -9,6 +9,7 @@ All notable changes to the OpenClaw Assistant Home Assistant Add-on will be docu
 
 ### Changed
 - Added translations for `force_ipv4_dns` option.
+- Updated docs with `force_ipv4_dns` configuration and Telegram network troubleshooting note.
 
 ## [0.5.67] - 2026-02-16
 
