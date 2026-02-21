@@ -319,7 +319,7 @@ PY
 fi
 
 # ------------------------------------------------------------------------------
-# Apply gateway LAN mode settings safely using helper script
+# Apply gateway bind mode settings safely using helper script
 # This updates gateway.bind and gateway.port without touching other settings
 # ------------------------------------------------------------------------------
 export OPENCLAW_CONFIG_PATH="/config/.openclaw/openclaw.json"

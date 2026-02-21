@@ -2,6 +2,15 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.70] - 2026-02-21
+
+### Added
+- Add new `gateway_bind_mode` values: `auto` and `tailnet`.
+
+### Changed
+- Update startup helper validation and CLI usage to support `auto|loopback|lan|tailnet` bind modes.
+- Update add-on translations and docs for the expanded gateway bind mode options.
+
 ## [0.5.69] - 2026-02-18
 
 ### Changed
