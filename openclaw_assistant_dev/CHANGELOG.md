@@ -2,6 +2,12 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.72] - 2026-02-21
+
+### Fixed
+- Mitigate repeated `SECURITY ERROR` logs from tools by sanitizing insecure non-loopback `ws://` gateway URLs in `openclaw.json` when running in local mode.
+- Normalize gateway tool URL targets to loopback (`ws://127.0.0.1:<port>`) for local mode startup hardening.
+
 ## [0.5.71] - 2026-02-21
 
 ### Changed

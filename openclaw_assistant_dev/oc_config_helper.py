@@ -9,6 +9,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 CONFIG_PATH = Path(os.environ.get("OPENCLAW_CONFIG_PATH", "/config/.openclaw/openclaw.json"))
 
@@ -55,6 +56,60 @@ def set_gateway_setting(key, value):
     
     cfg["gateway"][key] = value
     return write_config(cfg)
+
+
+def _is_loopback_host(hostname: str | None) -> bool:
+    """Return True if hostname is loopback/local-only."""
+    if not hostname:
+        return False
+    host = hostname.lower()
+    return host in {"localhost", "127.0.0.1", "::1"}
+
+
+def _sanitize_insecure_gateway_urls(cfg: dict, mode: str, port: int) -> list[str]:
+    """Rewrite insecure ws:// gateway URLs to loopback in local mode.
+
+    This prevents repeated SECURITY ERROR logs from tools that reject plaintext
+    websocket URLs pointing to non-loopback addresses.
+    """
+    if mode != "local":
+        return []
+
+    changes: list[str] = []
+    safe_ws_url = f"ws://127.0.0.1:{port}"
+
+    def _walk(node, path: list[str]):
+        if isinstance(node, dict):
+            for key, value in list(node.items()):
+                key_l = str(key).lower()
+                path_l = [p.lower() for p in path]
+
+                if isinstance(value, str) and value.startswith("ws://"):
+                    parsed = urlparse(value)
+                    hostname = parsed.hostname
+
+                    looks_gateway_related = (
+                        "gateway" in key_l
+                        or any("gateway" in p for p in path_l)
+                        or key_l in {"url", "gatewayurl", "gateway_url"}
+                    )
+
+                    if looks_gateway_related and not _is_loopback_host(hostname):
+                        node[key] = safe_ws_url
+                        location = ".".join(path + [str(key)])
+                        changes.append(
+                            f"{location}: {value} -> {safe_ws_url}"
+                        )
+
+                else:
+                    _walk(value, path + [str(key)])
+
+        elif isinstance(node, list):
+            for index, item in enumerate(node):
+                _walk(item, path + [str(index)])
+
+    _walk(cfg, [])
+    return changes
 
 
 def apply_gateway_settings(mode: str, bind_mode: str, port: int, enable_openai_api: bool, allow_insecure_auth: bool):
@@ -134,6 +189,11 @@ def apply_gateway_settings(mode: str, bind_mode: str, port: int, enable_openai_a
     if current_insecure != allow_insecure_auth:
         control_ui["allowInsecureAuth"] = allow_insecure_auth
         changes.append(f"allowInsecureAuth: {current_insecure} -> {allow_insecure_auth}")
+
+    # Hardening: avoid insecure non-loopback ws:// gateway URLs in local mode.
+    # Some OpenClaw tools reject such URLs and emit repeated SECURITY ERROR logs.
+    url_changes = _sanitize_insecure_gateway_urls(cfg, mode, port)
+    changes.extend(url_changes)
     
     if changes:
         if write_config(cfg):
