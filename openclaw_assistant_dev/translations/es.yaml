@@ -18,6 +18,10 @@ configuration:
   homeassistant_token:
     name: Token de Home Assistant
     description: Opcional - Token de larga duración de Home Assistant para scripts/herramientas de API local
+
+  http_proxy:
+    name: Proxy HTTP de salida
+    description: Opcional - URL de proxy para solicitudes HTTP/HTTPS salientes (ejemplo - http://192.168.2.1:3128)
   
   router_ssh_host:
     name: Host SSH del router

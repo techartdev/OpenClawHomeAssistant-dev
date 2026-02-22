@@ -18,6 +18,10 @@ configuration:
   homeassistant_token:
     name: Home Assistant токен
     description: Опционално - дълготраен токен на Home Assistant за локални API скриптове/инструменти
+
+  http_proxy:
+    name: Изходящ HTTP прокси
+    description: Опционално - URL на прокси за изходящи HTTP/HTTPS заявки (пример - http://192.168.2.1:3128)
   
   router_ssh_host:
     name: SSH хост на рутер

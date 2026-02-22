@@ -217,6 +217,7 @@ All options are set via **Settings → Apps/Add-ons → OpenClaw Assistant → C
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `homeassistant_token` | string | _(empty)_ | Optional HA long-lived access token (use at own risk, can be very unsecure but very powerful). Saved to `/config/secrets/homeassistant.token` for use by scripts/skills |
+| `http_proxy` | string | _(empty)_ | Optional outbound proxy URL for HTTP/HTTPS requests from OpenClaw and Node tools. Example: `http://192.168.2.1:3128` |
 
 ### Router SSH
 
@@ -605,6 +606,18 @@ If Telegram is configured but polling fails with network fetch errors:
 2. If IPv4 works but default/IPv6 fails, set add-on option `force_ipv4_dns: true` and restart.
 3. Keep `channels.telegram.network.autoSelectFamily: false` (default on Node 22).
 4. If still failing, check host/VM IPv6 routing and DNS configuration.
+
+### Outbound proxy not applied
+
+**Symptom**: External API/network calls still fail in restricted networks even after setting proxy.
+
+**Checks**:
+1. Set add-on option `http_proxy` with full URL format: `http://host:port` (example: `http://192.168.2.1:3128`).
+2. Restart the add-on after changing configuration.
+3. Check logs for `INFO: Outbound HTTP/HTTPS proxy enabled from add-on configuration.`
+4. If you see `WARN: Invalid http_proxy value`, fix the URL format and restart.
+
+When proxy is enabled, add-on startup also applies default bypass ranges via `NO_PROXY`/`no_proxy` for localhost and private network ranges.
 
 ### Skills disappearing after update
 

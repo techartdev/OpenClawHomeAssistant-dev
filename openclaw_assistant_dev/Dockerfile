@@ -124,6 +124,7 @@ fi
 EOF
 COPY run.sh /run.sh
 COPY oc_config_helper.py /oc_config_helper.py
+COPY openclaw-proxy-shim.cjs /usr/local/lib/openclaw-proxy-shim.cjs
 COPY nginx.conf.tpl /etc/nginx/nginx.conf.tpl
 COPY landing.html.tpl /etc/nginx/landing.html.tpl
 RUN chmod +x /run.sh /oc_config_helper.py \

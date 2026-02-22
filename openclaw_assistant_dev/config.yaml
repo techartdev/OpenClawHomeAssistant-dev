@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.73"
+version: "0.5.74"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -41,6 +41,10 @@ options:
   # Optional: Home Assistant long-lived token (for local HA API scripts/tools)
   homeassistant_token: ""
 
+  # Optional: outbound HTTP/HTTPS proxy for OpenClaw network access.
+  # Example: "http://192.168.2.1:3128"
+  http_proxy: ""
+
   # Optional: Router SSH defaults (leave empty if you don't need router automation)
   # This is a generic SSH configuration intended for a router/firewall or any network device
   # reachable from inside the HA host LAN.
@@ -61,7 +65,7 @@ options:
   # Gateway network bind mode:
   # - loopback: bind to 127.0.0.1 only (local access only, most secure)
   # - lan: bind to all interfaces (accessible from local network)
-  # - tailnet: bind to Tailscale IP only (accessible only via Tailscale — recommended for remote access)
+  # - tailnet: bind to Tailscale IP only (accessible only via Tailscale ï¿½ recommended for remote access)
   # - auto: prefer loopback; use tailnet if Tailscale is available
   # Default is loopback for security.
   gateway_bind_mode: loopback
@@ -91,6 +95,7 @@ schema:
   terminal_port: int(1024,65535)?
   gateway_public_url: str?
   homeassistant_token: str?
+  http_proxy: str?
 
   router_ssh_host: str
   router_ssh_user: str
