@@ -59,10 +59,10 @@ options:
   gateway_mode: local
 
   # Gateway network bind mode:
-  # - loopback: bind to 127.0.0.1 only (local access only, more secure)
+  # - loopback: bind to 127.0.0.1 only (local access only, most secure)
   # - lan: bind to all interfaces (accessible from local network)
-  # - tailnet: bind only to Tailscale interface address (tailnet-only access)
-  # - auto: OpenClaw auto-select bind (upstream behavior)
+  # - tailnet: bind to Tailscale IP only (accessible only via Tailscale — recommended for remote access)
+  # - auto: prefer loopback; use tailnet if Tailscale is available
   # Default is loopback for security.
   gateway_bind_mode: loopback
 
