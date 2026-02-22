@@ -59,4 +59,6 @@ http {
       return 404;
     }
   }
+
+  __HTTPS_GATEWAY_BLOCK__
 }

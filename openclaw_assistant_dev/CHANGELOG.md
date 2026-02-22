@@ -2,6 +2,34 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.77] - 2026-02-23
+
+### Added
+- **`access_mode` preset option** — simplifies secure access configuration with one setting:
+  - `custom` (default, backward-compatible): use individual gateway settings
+  - `local_only`: loopback + token (Ingress/terminal only)
+  - `lan_https`: **built-in HTTPS reverse proxy for LAN access** (recommended for phones/tablets)
+  - `lan_reverse_proxy`: LAN bind + trusted-proxy for external reverse proxy (NPM, Caddy, Traefik)
+  - `tailnet_https`: Tailscale interface bind + token auth
+- **Built-in TLS certificate generation** (`lan_https` mode):
+  - Auto-generates a local CA + server certificate on first startup
+  - Server cert is regenerated automatically when LAN IP changes
+  - CA certificate downloadable from the landing page for one-tap phone trust
+  - nginx HTTPS server block terminates TLS and proxies to the loopback gateway
+- **Overhauled landing page** with:
+  - Real-time status cards (gateway health, secure context, access mode)
+  - Access wizard with step-by-step guidance per mode
+  - Error translation — maps raw errors like `1008: requires device identity` to friendly messages with fixes
+  - CA certificate download button (lan_https mode)
+  - Migration banner for users on `custom` mode recommending a preset
+  - Collapsible reverse-proxy recipes (NPM / Caddy / Traefik / Tailscale)
+- Added `openssl` to Docker image for TLS certificate generation.
+- Translations for `access_mode` in all 6 languages (EN, BG, DE, ES, PL, PT-BR).
+
+### Changed
+- Gateway token is auto-constructed from detected LAN IP when `lan_https` is active and `gateway_public_url` is empty.
+- Config helper now receives the effective internal port (gateway_port + 1 in lan_https mode).
+
 ## [0.5.76] - 2026-02-22
 
 ### Fixed

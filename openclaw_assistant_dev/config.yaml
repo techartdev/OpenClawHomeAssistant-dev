@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.76"
+version: "0.5.77"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -73,6 +73,14 @@ options:
   # Gateway port to listen on
   gateway_port: 18789
 
+  # Access mode preset — simplifies secure access configuration.
+  # custom: use individual gateway_bind_mode / auth_mode settings (backward compatible)
+  # local_only: loopback + token auth (Ingress / terminal only, most secure)
+  # lan_https: Built-in HTTPS reverse proxy for LAN access (recommended for phones/tablets)
+  # lan_reverse_proxy: LAN bind + trusted-proxy for an external reverse proxy (NPM, Caddy, …)
+  # tailnet_https: Tailscale interface bind + token auth
+  access_mode: custom
+
   # Gateway authentication mode:
   # - token: standard token auth (default)
   # - trusted-proxy: trust auth headers from configured reverse proxies
@@ -110,6 +118,7 @@ schema:
   gateway_mode: list(local|remote)?
   gateway_bind_mode: list(auto|loopback|lan|tailnet)?
   gateway_port: int(1,65535)?
+  access_mode: list(custom|local_only|lan_https|lan_reverse_proxy|tailnet_https)?
   gateway_auth_mode: list(token|trusted-proxy)?
   gateway_trusted_proxies: str?
   enable_openai_api: bool?

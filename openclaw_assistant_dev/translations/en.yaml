@@ -61,9 +61,13 @@ configuration:
   
 
 
+  access_mode:
+    name: Access Mode
+    description: "Simplifies secure access setup. custom: use individual settings (backward-compatible). local_only: loopback + token (Ingress only). lan_https: built-in HTTPS proxy for LAN (recommended for phones). lan_reverse_proxy: external reverse proxy with trusted-proxy auth. tailnet_https: Tailscale HTTPS."
+
   gateway_auth_mode:
     name: Gateway Auth Mode
-    description: Gateway auth mode - token (default) or trusted-proxy (for HTTPS reverse proxies).
+    description: Gateway auth mode - token (default) or trusted-proxy (for HTTPS reverse proxies). Overridden when access_mode is not custom.
 
   gateway_trusted_proxies:
     name: Gateway Trusted Proxies

@@ -61,13 +61,17 @@ configuration:
   
 
 
+  access_mode:
+    name: Modo de acceso
+    description: "Simplifica la configuración de acceso seguro. custom: configuración individual (compatible hacia atrás). local_only: loopback + token (solo Ingress). lan_https: proxy HTTPS integrado para LAN (recomendado para teléfonos). lan_reverse_proxy: proxy inverso externo. tailnet_https: Tailscale HTTPS."
+
   gateway_auth_mode:
-    name: Gateway Auth Mode
-    description: Gateway auth mode - token (default) or trusted-proxy (for HTTPS reverse proxies).
+    name: Modo de autenticación del Gateway
+    description: Modo de autenticación - token (predeterminado) o trusted-proxy (para proxys inversos HTTPS). Se anula cuando access_mode no es custom.
 
   gateway_trusted_proxies:
-    name: Gateway Trusted Proxies
-    description: Comma-separated trusted proxy IP/CIDR list for trusted-proxy mode (example - 127.0.0.1,192.168.88.0/24).
+    name: Proxys de confianza del Gateway
+    description: Lista de IPs/CIDR de proxys de confianza separados por comas para el modo trusted-proxy (ejemplo - 127.0.0.1,192.168.88.0/24).
   force_ipv4_dns:
     name: Forzar orden DNS IPv4
     description: Fuerza el orden de DNS con prioridad IPv4 para llamadas de red de Node. Útil cuando el DNS IPv6 resuelve, pero el enrutamiento IPv6 a Internet falla (puede afectar el polling de la API de Telegram).

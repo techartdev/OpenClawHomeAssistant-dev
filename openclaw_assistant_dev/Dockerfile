@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rsync \
     bat \
     less \
+    openssl \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -124,10 +125,11 @@ fi
 EOF
 COPY run.sh /run.sh
 COPY oc_config_helper.py /oc_config_helper.py
+COPY render_nginx.py /render_nginx.py
 COPY openclaw-proxy-shim.cjs /usr/local/lib/openclaw-proxy-shim.cjs
 COPY nginx.conf.tpl /etc/nginx/nginx.conf.tpl
 COPY landing.html.tpl /etc/nginx/landing.html.tpl
-RUN chmod +x /run.sh /oc_config_helper.py \
+RUN chmod +x /run.sh /oc_config_helper.py /render_nginx.py \
  && mkdir -p /run/nginx
 
 CMD [ "/run.sh" ]
