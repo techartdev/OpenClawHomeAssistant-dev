@@ -115,12 +115,17 @@ def apply_gateway_settings(mode: str, bind_mode: str, port: int, enable_openai_a
 
     trusted_proxies = [p.strip() for p in trusted_proxies_csv.split(",") if p.strip()]
 
+    # OpenClaw trusted-proxy mode requires nested auth.trustedProxy config.
+    # Use a sane default user header expected from reverse proxies.
+    trusted_proxy_cfg_default = {"userHeader": "x-forwarded-user"}
+
     current_mode = gateway.get("mode", "")
     current_bind = gateway.get("bind", "")
     current_port = gateway.get("port", 18789)
     current_openai_api = chat_completions.get("enabled", False)
     current_auth_mode = auth.get("mode", "token")
     current_trusted_proxies = gateway.get("trustedProxies", [])
+    current_trusted_proxy_cfg = auth.get("trustedProxy")
     
     changes = []
     
@@ -147,6 +152,11 @@ def apply_gateway_settings(mode: str, bind_mode: str, port: int, enable_openai_a
     if current_trusted_proxies != trusted_proxies:
         gateway["trustedProxies"] = trusted_proxies
         changes.append(f"trustedProxies: {current_trusted_proxies} -> {trusted_proxies}")
+
+    if auth_mode == "trusted-proxy":
+        if current_trusted_proxy_cfg != trusted_proxy_cfg_default:
+            auth["trustedProxy"] = trusted_proxy_cfg_default
+            changes.append("auth.trustedProxy: configured default userHeader=x-forwarded-user")
     
     if changes:
         if write_config(cfg):

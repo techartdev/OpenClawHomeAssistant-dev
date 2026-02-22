@@ -2,6 +2,12 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.76] - 2026-02-22
+
+### Fixed
+- Fix trusted-proxy startup crash by writing required nested `gateway.auth.trustedProxy` config.
+- Add default `gateway.auth.trustedProxy.userHeader` = `x-forwarded-user` when `gateway_auth_mode=trusted-proxy`.
+
 ## [0.5.75] - 2026-02-22
 
 ### Changed

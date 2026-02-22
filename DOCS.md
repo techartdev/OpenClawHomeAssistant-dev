@@ -205,6 +205,8 @@ All options are set via **Settings → Apps/Add-ons → OpenClaw Assistant → C
 | `enable_openai_api` | bool | `false` | Enable the OpenAI-compatible `/v1/chat/completions` endpoint. Required for [Assist pipeline integration](#6c-assist-pipeline-integration-openai-api) |
 | `gateway_auth_mode` | `token` / `trusted-proxy` | `token` | Gateway auth mode. Use `trusted-proxy` when terminating HTTPS in a reverse proxy and forwarding trusted auth headers. |
 | `gateway_trusted_proxies` | string | _(empty)_ | Comma-separated trusted proxy IP/CIDR list used with `gateway_auth_mode: trusted-proxy`. |
+
+When `gateway_auth_mode: trusted-proxy` is used, the add-on sets `gateway.auth.trustedProxy.userHeader` to `x-forwarded-user` by default.
 | `force_ipv4_dns` | bool | `false` | Force IPv4-first DNS ordering for Node network calls. Useful if IPv6 DNS resolves but IPv6 egress is broken (can affect Telegram API polling). |
 
 ### Terminal
