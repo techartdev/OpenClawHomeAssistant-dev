@@ -668,3 +668,5 @@ Yes, if you set `gateway_bind_mode` to `lan`. Any device on your network can con
 
 **Where is my data stored on the host?**
 The add-on's `/config/` directory maps to `/addon_configs/<slug>/` on the Home Assistant host. This is included in HA backups automatically.
+
+The add-on also mounts Home Assistant `/share` and `/media` as writable paths inside the container (`/share`, `/media`) for file access workflows. These are separate from OpenClaw's default persistent workspace under `/config`.

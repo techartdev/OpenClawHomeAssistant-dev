@@ -2,6 +2,12 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.73] - 2026-02-22
+
+### Changed
+- Bump OpenClaw to 2026.2.21-2.
+- Add Home Assistant `share` and `media` mounts to the add-on (`map: share:rw, media:rw`).
+
 ## [0.5.72] - 2026-02-21
 - Empty, fix rolled back
 

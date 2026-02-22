@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.72"
+version: "0.5.73"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -22,6 +22,8 @@ panel_icon: mdi:robot
 
 map:
   - addon_config:rw
+  - share:rw
+  - media:rw
 options:
   timezone: "Europe/Sofia"
 
