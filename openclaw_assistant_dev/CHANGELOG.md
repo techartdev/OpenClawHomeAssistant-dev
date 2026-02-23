@@ -4,6 +4,12 @@ All notable changes to the OpenClaw Assistant Home Assistant Add-on will be docu
 
 ## [0.5.81] - 2026-02-23
 
+### Fixed
+- **`web_fetch failed: fetch failed`**: changed `force_ipv4_dns` default to **true**. Node 22 tries IPv6 first; most HAOS VMs lack IPv6 egress, causing all outbound `web_fetch` / HTTP tool calls to time out.
+
+### Added
+- **`nginx_log_level` option** (`minimal` / `full`, default `minimal`): suppresses repetitive Home Assistant health-check and polling requests (`GET /`, `GET /v1/models`, `POST /tools/invoke`) from the nginx access log.
+
 ### Changed
 - **Upgraded OpenClaw to v2026.2.22-2** — includes major gateway/auth/pairing fixes and security hardening.
 - Precreate `$OPENCLAW_CONFIG_DIR/identity` on startup to prevent `EACCES` errors on CLI commands that need device identity.

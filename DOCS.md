@@ -250,7 +250,8 @@ All options are set via **Settings → Apps/Add-ons → OpenClaw Assistant → C
 | `gateway_trusted_proxies` | string | _(empty)_ | Comma-separated trusted proxy IP/CIDR list used with `gateway_auth_mode: trusted-proxy`. |
 
 When `gateway_auth_mode: trusted-proxy` is used, the add-on sets `gateway.auth.trustedProxy.userHeader` to `x-forwarded-user` by default.
-| `force_ipv4_dns` | bool | `false` | Force IPv4-first DNS ordering for Node network calls. Useful if IPv6 DNS resolves but IPv6 egress is broken (can affect Telegram API polling). |
+| `force_ipv4_dns` | bool | `true` | Force IPv4-first DNS ordering for Node network calls. **Recommended ON** — most HAOS VMs lack IPv6 egress, causing `web_fetch` and Telegram timeouts. Set to `false` only if your network has working IPv6. |
+| `nginx_log_level` | `full` / `minimal` | `minimal` | Nginx access log verbosity. `minimal` suppresses repetitive Home Assistant health-check and polling requests (`GET /`, `GET /v1/models`). `full` logs everything. |
 
 ### Terminal
 
@@ -793,6 +794,14 @@ Paste this token when the UI prompts for authentication, or append it to the URL
 2. Check logs for `Starting web terminal (ttyd)` — if missing, the terminal is disabled
 3. If you see a port conflict error, change `terminal_port` to a different value
 
+### `web_fetch failed: fetch failed` / HTTP tool calls time out
+
+**Symptom**: OpenClaw's `web_fetch` tool (or any outbound HTTP call from a skill) fails with `fetch failed`.
+
+**Cause**: Node 22 uses `autoSelectFamily` which tries IPv6 first. Most HAOS VMs have IPv6 DNS resolution but no IPv6 egress, so connections time out before falling back to IPv4.
+
+**Fix**: Ensure `force_ipv4_dns` is **true** (default since v0.5.81). If you upgraded from an older version, the option may still be set to `false` — change it to `true` in **Settings → Add-ons → OpenClaw Assistant → Configuration** and restart.
+
 ### Telegram network errors (`TypeError: fetch failed` / `getUpdates` fails)
 
 If Telegram is configured but polling fails with network fetch errors:
@@ -802,7 +811,7 @@ If Telegram is configured but polling fails with network fetch errors:
    curl -4 https://api.telegram.org/bot<token>/getMe
    curl -6 https://api.telegram.org/bot<token>/getMe
    ```
-2. If IPv4 works but default/IPv6 fails, set add-on option `force_ipv4_dns: true` and restart.
+2. If IPv4 works but default/IPv6 fails, ensure add-on option `force_ipv4_dns` is `true` (default) and restart.
 3. Keep `channels.telegram.network.autoSelectFamily: false` (default on Node 22).
 4. If still failing, check host/VM IPv6 routing and DNS configuration.
 

@@ -95,9 +95,14 @@ options:
   enable_openai_api: false
 
   # Force IPv4-first DNS result ordering for Node fetch/network calls.
-  # Useful on networks where IPv6 resolution exists but IPv6 egress is broken
-  # (can affect Telegram API polling in some HAOS/VM setups).
-  force_ipv4_dns: false
+  # Most HAOS VMs lack IPv6 egress, causing web_fetch / Telegram timeouts.
+  # Default: true (recommended). Set to false only if you need IPv6.
+  force_ipv4_dns: true
+
+  # Nginx access log verbosity:
+  # full: log all requests (useful for debugging)
+  # minimal: suppress repetitive HA health-check and polling requests (default)
+  nginx_log_level: minimal
 
 
 schema:
@@ -122,4 +127,5 @@ schema:
   gateway_trusted_proxies: str?
   enable_openai_api: bool?
   force_ipv4_dns: bool?
+  nginx_log_level: list(full|minimal)?
 

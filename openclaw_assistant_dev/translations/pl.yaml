@@ -88,4 +88,10 @@ configuration:
     description: Włącz endpoint Chat Completions kompatybilny z OpenAI. Pozwala używać OpenClaw jako agenta konwersacji w HA Assist pipeline przez Extended OpenAI Conversation (HACS) lub dowolnego klienta kompatybilnego z OpenAI.
   force_ipv4_dns:
     name: Wymuś kolejność DNS IPv4
-    description: Wymusza preferowanie IPv4 przy rozwiązywaniu DNS dla wywołań sieciowych Node. Przydatne, gdy DNS IPv6 się rozwiązuje, ale routing IPv6 do Internetu nie działa (może wpływać na polling API Telegrama).
+    description: Wymusza priorytet IPv4 w DNS. Większość VM HAOS nie ma wyjścia IPv6 — powoduje błędy web_fetch i Telegram. Zalecane WŁĄCZONE (domyślnie).
+  nginx_log_level:
+    name: Poziom logów Nginx
+    description: "Szczegółowość logów dostępu nginx. 'minimal' (domyślnie) pomija powtarzające się żądania health-check i polling HA. 'full' loguje wszystko."
+    options:
+      minimal: "Minimalny (pominięcie szumu polling HA)"
+      full: "Pełny (logowanie wszystkich żądań)"

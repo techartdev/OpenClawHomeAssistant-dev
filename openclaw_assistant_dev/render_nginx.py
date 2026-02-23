@@ -30,6 +30,7 @@ def main():
     disk_used = os.environ.get('DISK_USED', '')
     disk_avail = os.environ.get('DISK_AVAIL', '')
     disk_pct = os.environ.get('DISK_PCT', '')
+    nginx_log_level = os.environ.get('NGINX_LOG_LEVEL', 'minimal')
 
     # Token comes from environment (best-effort CLI query in run.sh)
     token = os.environ.get('GW_TOKEN', '')
@@ -37,7 +38,21 @@ def main():
     gw_path = '' if public_url.endswith('/') else '/'
 
     # ── nginx.conf ──────────────────────────────────────────────
-    conf = tpl.replace('__TERMINAL_PORT__', terminal_port)
+    # Build access_log directive (minimal suppresses HA health-check / polling noise)
+    if nginx_log_level == 'minimal':
+        access_log_block = (
+            '# Suppress repetitive HA health-check / polling requests\n'
+            '  map $http_user_agent $loggable {\n'
+            '    ~HomeAssistant 0;\n'
+            '    default 1;\n'
+            '  }\n'
+            '  access_log /dev/stdout combined if=$loggable;'
+        )
+    else:
+        access_log_block = 'access_log /dev/stdout;'
+
+    conf = tpl.replace('__NGINX_ACCESS_LOG__', access_log_block)
+    conf = conf.replace('__TERMINAL_PORT__', terminal_port)
 
     # Build HTTPS gateway proxy block (only for lan_https mode)
     https_block = ''

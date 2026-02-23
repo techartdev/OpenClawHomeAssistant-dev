@@ -52,8 +52,9 @@ GATEWAY_PORT=$(jq -r '.gateway_port // 18789' "$OPTIONS_FILE")
 ENABLE_OPENAI_API=$(jq -r '.enable_openai_api // false' "$OPTIONS_FILE")
 GATEWAY_AUTH_MODE=$(jq -r '.gateway_auth_mode // "token"' "$OPTIONS_FILE")
 GATEWAY_TRUSTED_PROXIES=$(jq -r '.gateway_trusted_proxies // empty' "$OPTIONS_FILE")
-FORCE_IPV4_DNS=$(jq -r '.force_ipv4_dns // false' "$OPTIONS_FILE")
+FORCE_IPV4_DNS=$(jq -r '.force_ipv4_dns // true' "$OPTIONS_FILE")
 ACCESS_MODE=$(jq -r '.access_mode // "custom"' "$OPTIONS_FILE")
+NGINX_LOG_LEVEL=$(jq -r '.nginx_log_level // "minimal"' "$OPTIONS_FILE")
 
 export TZ="$TZNAME"
 
@@ -603,6 +604,7 @@ GW_PUBLIC_URL="$GW_PUBLIC_URL" GW_TOKEN="$GW_TOKEN" TERMINAL_PORT="$TERMINAL_POR
   ENABLE_HTTPS_PROXY="$ENABLE_HTTPS_PROXY" HTTPS_PROXY_PORT="$GATEWAY_PORT" \
   GATEWAY_INTERNAL_PORT="$GATEWAY_INTERNAL_PORT" ACCESS_MODE="$ACCESS_MODE" \
   DISK_TOTAL="$DISK_TOTAL" DISK_USED="$DISK_USED" DISK_AVAIL="$DISK_AVAIL" DISK_PCT="$DISK_PCT" \
+  NGINX_LOG_LEVEL="$NGINX_LOG_LEVEL" \
   python3 /render_nginx.py
 
 echo "Starting ingress proxy (nginx) on :48099 ..."

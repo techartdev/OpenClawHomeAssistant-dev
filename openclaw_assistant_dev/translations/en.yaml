@@ -88,4 +88,10 @@ configuration:
     description: Enable OpenAI-compatible Chat Completions endpoint. Allows using OpenClaw as a conversation agent in HA Assist pipeline via Extended OpenAI Conversation (HACS) or any OpenAI-compatible client.
   force_ipv4_dns:
     name: Force IPv4 DNS Order
-    description: Force IPv4-first DNS ordering for Node network calls. Useful when IPv6 DNS resolves but IPv6 internet routing is broken (can affect Telegram API polling).
+    description: Force IPv4-first DNS ordering for Node network calls. Most HAOS VMs lack IPv6 egress, causing web_fetch and Telegram timeouts. Recommended ON (default).
+  nginx_log_level:
+    name: Nginx Log Level
+    description: "Access log verbosity for the built-in nginx proxy. 'minimal' (default) suppresses repetitive HA health-check and polling requests. 'full' logs everything."
+    options:
+      minimal: "Minimal (suppress HA polling noise)"
+      full: "Full (log all requests)"
