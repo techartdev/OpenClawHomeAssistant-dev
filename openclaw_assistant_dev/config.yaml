@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.82"
+version: "0.5.83"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -104,6 +104,19 @@ options:
   # minimal: suppress repetitive HA health-check and polling requests (default)
   nginx_log_level: minimal
 
+  # Environment variables to pass to the gateway process at startup.
+  # Format: list of objects with name/value fields.
+  # Example:
+  #   gateway_env_vars:
+  #     - name: OPENAI_API_KEY
+  #       value: "sk-abc123"
+  #     - name: LOG_LEVEL
+  #       value: "debug"
+  # Reserved keys are blocked to protect runtime/security
+  # (e.g. PATH, HOME, NODE_OPTIONS, NODE_PATH, OPENCLAW_*, proxy vars).
+  # Limits: max 50 variables, max key length 255 chars, max value length 10000 chars
+  gateway_env_vars: []
+
 
 schema:
   timezone: str
@@ -127,5 +140,8 @@ schema:
   gateway_trusted_proxies: str?
   enable_openai_api: bool?
   force_ipv4_dns: bool?
+  gateway_env_vars:
+    - name: "match(^[A-Z_][A-Z0-9_]*$)"
+      value: str
   nginx_log_level: list(full|minimal)?
 

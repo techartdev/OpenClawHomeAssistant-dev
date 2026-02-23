@@ -2,6 +2,13 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.83] - 2026-02-23
+
+### Added
+- New add-on option `gateway_env_vars` that accepts a list of `{name, value}` objects from Home Assistant UI and safely injects values into the gateway process at startup (max 50 vars, key <=255 chars, value <=10000 chars).
+- Guard `gateway_env_vars` from overriding reserved runtime/proxy/`OPENCLAW_*` keys.
+- Keep legacy string/object input formats for backward compatibility.
+
 ## [0.5.82] - 2026-02-23
 
 ### Fixed
