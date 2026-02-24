@@ -2,6 +2,17 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.86] - 2026-02-24
+
+### Fixed
+- `gateway_mode=remote` no longer crashes startup with `Gateway start blocked: set gateway.mode=local`.
+- In `remote` mode the add-on no longer starts a local gateway service.
+- In `remote` mode the add-on now starts `openclaw node run` and connects to `gateway.remote.url` (supports `ws://` and `wss://`).
+
+### Added
+- New add-on option `gateway_remote_url` (UI field).
+- Add-on now writes `gateway.remote.url` in OpenClaw config from `gateway_remote_url` on startup.
+
 ## [0.5.85] - 2026-02-24
 
 - Bump OpenClaw to 2026.2.23.

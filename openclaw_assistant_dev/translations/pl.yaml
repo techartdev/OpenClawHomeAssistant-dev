@@ -43,6 +43,10 @@ configuration:
     name: Wyczyść blokady sesji przy wyjściu
     description: Usuń pliki blokad sesji gdy dodatek zatrzymuje się poprawnie
   
+  gateway_remote_url:
+    name: URL zdalnego Gateway
+    description: Adres WebSocket zdalnego gateway używany gdy Gateway Mode = Remote (przykład - ws://192.168.1.20:18789 lub wss://gateway.example.com:443)
+
   gateway_bind_mode:
     name: Tryb bindowania Gateway
     description: Tryb bindowania sieci - loopback (tylko 127.0.0.1, najbezpieczniejszy), lan (wszystkie interfejsy) lub tailnet (tylko interfejs Tailscale). Nadpisywane przez ustawienia trybu dostępu.

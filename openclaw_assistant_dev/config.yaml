@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.85"
+version: "0.5.86"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -61,6 +61,10 @@ options:
   # - remote: Connect to a remote gateway
   # Default is local.
   gateway_mode: local
+
+  # Remote gateway URL (used when gateway_mode=remote)
+  # Example: "ws://192.168.1.20:18789" or "wss://gateway.example.com:443"
+  gateway_remote_url: ""
 
   # Gateway network bind mode:
   # - loopback: bind to 127.0.0.1 only (local access only, most secure)
@@ -133,6 +137,7 @@ schema:
   clean_session_locks_on_start: bool?
   clean_session_locks_on_exit: bool?
   gateway_mode: list(local|remote)?
+  gateway_remote_url: str?
   gateway_bind_mode: list(loopback|lan|tailnet)?
   gateway_port: int(1,65535)?
   access_mode: list(custom|local_only|lan_https|lan_reverse_proxy|tailnet_https)?

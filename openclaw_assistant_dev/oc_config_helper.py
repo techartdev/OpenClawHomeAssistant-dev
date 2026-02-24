@@ -57,12 +57,13 @@ def set_gateway_setting(key, value):
     return write_config(cfg)
 
 
-def apply_gateway_settings(mode: str, bind_mode: str, port: int, enable_openai_api: bool, auth_mode: str, trusted_proxies_csv: str):
+def apply_gateway_settings(mode: str, remote_url: str, bind_mode: str, port: int, enable_openai_api: bool, auth_mode: str, trusted_proxies_csv: str):
     """
     Apply gateway settings to OpenClaw config.
     
     Args:
         mode: "local" or "remote"
+        remote_url: remote Gateway websocket URL (used when mode=remote)
         bind_mode: "loopback", "lan", or "tailnet"
         port: Port number to listen on (must be 1-65535)
         enable_openai_api: Enable OpenAI-compatible Chat Completions endpoint
@@ -97,7 +98,12 @@ def apply_gateway_settings(mode: str, bind_mode: str, port: int, enable_openai_a
         cfg["gateway"] = {}
     
     gateway = cfg["gateway"]
-    
+
+    # gateway.remote settings
+    if "remote" not in gateway or not isinstance(gateway.get("remote"), dict):
+        gateway["remote"] = {}
+    remote_cfg = gateway["remote"]
+
     # auth should be nested inside gateway
     if "auth" not in gateway:
         gateway["auth"] = {}
@@ -120,6 +126,7 @@ def apply_gateway_settings(mode: str, bind_mode: str, port: int, enable_openai_a
     trusted_proxy_cfg_default = {"userHeader": "x-forwarded-user"}
 
     current_mode = gateway.get("mode", "")
+    current_remote_url = remote_cfg.get("url", "")
     current_bind = gateway.get("bind", "")
     current_port = gateway.get("port", 18789)
     current_openai_api = chat_completions.get("enabled", False)
@@ -132,6 +139,10 @@ def apply_gateway_settings(mode: str, bind_mode: str, port: int, enable_openai_a
     if current_mode != mode:
         gateway["mode"] = mode
         changes.append(f"mode: {current_mode} -> {mode}")
+
+    if current_remote_url != remote_url:
+        remote_cfg["url"] = remote_url
+        changes.append(f"remote.url: {current_remote_url} -> {remote_url}")
     
     if current_bind != bind_mode:
         gateway["bind"] = bind_mode
@@ -166,7 +177,7 @@ def apply_gateway_settings(mode: str, bind_mode: str, port: int, enable_openai_a
             print("ERROR: Failed to write config")
             return False
     else:
-        print(f"INFO: Gateway settings already correct (mode={mode}, bind={bind_mode}, port={port}, chatCompletions={enable_openai_api}, authMode={auth_mode}, trustedProxies={trusted_proxies})")
+        print(f"INFO: Gateway settings already correct (mode={mode}, remoteUrl={remote_url}, bind={bind_mode}, port={port}, chatCompletions={enable_openai_api}, authMode={auth_mode}, trustedProxies={trusted_proxies})")
         return True
 
 
@@ -243,16 +254,17 @@ def main():
     cmd = sys.argv[1]
     
     if cmd == "apply-gateway-settings":
-        if len(sys.argv) != 8:
-            print("Usage: oc_config_helper.py apply-gateway-settings <local|remote> <loopback|lan|tailnet> <port> <enable_openai_api:true|false> <auth_mode:token|trusted-proxy> <trusted_proxies_csv>")
+        if len(sys.argv) != 9:
+            print("Usage: oc_config_helper.py apply-gateway-settings <local|remote> <remote_url> <loopback|lan|tailnet> <port> <enable_openai_api:true|false> <auth_mode:token|trusted-proxy> <trusted_proxies_csv>")
             sys.exit(1)
         mode = sys.argv[2]
-        bind_mode = sys.argv[3]
-        port = int(sys.argv[4])
-        enable_openai_api = sys.argv[5].lower() == "true"
-        auth_mode = sys.argv[6]
-        trusted_proxies_csv = sys.argv[7]
-        success = apply_gateway_settings(mode, bind_mode, port, enable_openai_api, auth_mode, trusted_proxies_csv)
+        remote_url = sys.argv[3]
+        bind_mode = sys.argv[4]
+        port = int(sys.argv[5])
+        enable_openai_api = sys.argv[6].lower() == "true"
+        auth_mode = sys.argv[7]
+        trusted_proxies_csv = sys.argv[8]
+        success = apply_gateway_settings(mode, remote_url, bind_mode, port, enable_openai_api, auth_mode, trusted_proxies_csv)
         sys.exit(0 if success else 1)
     
     elif cmd == "get":
