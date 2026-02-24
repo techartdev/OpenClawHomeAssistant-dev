@@ -159,19 +159,29 @@ This is the simplest way to get secure LAN access, especially for phones and tab
 
 > **Note**: If you skip CA installation, you can still access the gateway — just accept the browser's certificate warning once.
 
-### Method B — HTTPS via external reverse proxy
+### Method B — HTTPS via external reverse proxy (tested recipe: NPM)
 
-If you already run a reverse proxy (NPM, Caddy, Traefik):
+Use this when you already run Nginx Proxy Manager (or Caddy/Traefik).
 
+**OpenClaw add-on settings**
 1. Set `access_mode`: **lan_reverse_proxy**
-2. Set `gateway_trusted_proxies` to your proxy's IP/CIDR (e.g., `127.0.0.1,192.168.88.0/24`)
-3. Set `gateway_public_url` to your HTTPS URL
-4. Configure your proxy to forward HTTPS to `<HA-IP>:18789`
-5. Restart the add-on
+2. Set `gateway_trusted_proxies` to your proxy source CIDR/IP.
+   - Example for NPM add-on network: `172.30.0.0/16`
+   - Or strict single IP: `172.30.x.y/32`
+3. Set `gateway_public_url` to your final HTTPS URL (example: `https://openclaw.example.com`)
+4. Restart OpenClaw add-on
 
-See the landing page's **Reverse-proxy recipes** section for copy-paste configs.
+**NPM host config (known-good pattern)**
+1. Create Proxy Host: `openclaw.example.com`
+2. Forward to: `http://<HA-LAN-IP>:18789`
+3. Enable **Websockets Support**
+4. SSL tab: request/attach certificate, enable **Force SSL**
+5. Add custom header for trusted-proxy auth:
+   - `X-Forwarded-User: openclaw`
 
-> **Note**: Nabu Casa remote access only proxies port 8123 — it cannot forward custom ports. The Ingress page works through Nabu Casa, but the Gateway UI requires one of the methods above.
+Then open `https://openclaw.example.com`.
+
+> **Important**: Nabu Casa remote access only proxies port 8123. It does not expose custom add-on ports directly.
 
 ### Method C — SSH port forwarding (secure, no config changes)
 
@@ -185,13 +195,22 @@ Then open `http://localhost:18789` in your browser. `localhost` counts as a secu
 
 > **Limitation**: SSH forwarding doesn't work on phones/tablets. Use `lan_https` for mobile access.
 
-### Method D — Tailscale HTTPS
+### Method D — Tailnet flow (tested with HA Tailscale add-on + NPM)
 
-1. Set `access_mode`: **tailnet_https**
-2. Enable HTTPS certificates in your Tailnet admin: **DNS → HTTPS Certificates**
-3. On the HA host: `tailscale cert <machine-name>.ts.net`
-4. Set `gateway_public_url` to `https://<machine-name>.ts.net:18789`
-5. Restart the add-on
+This is the practical flow users report as stable in HAOS.
+
+1. In **Tailscale add-on**:
+   - Disable `userspace_networking` (must be `false` so other add-ons can reach tailnet interface)
+2. In **OpenClaw add-on**:
+   - Preferred: set `access_mode` to **tailnet_https**
+   - Alternative (equivalent): `gateway_bind_mode: tailnet`, token auth
+3. In **NPM**:
+   - Forward target to `http://<HA-TAILNET-IP>:18789`
+   - Enable websockets
+   - Configure TLS cert on the public host
+4. Set `gateway_public_url` to the final HTTPS URL and restart OpenClaw
+
+> **Why this flow**: `tailnet_https` in this add-on is a bind/auth preset. It does not automatically run `tailscale serve` inside OpenClaw.
 
 ### Setting up the "Open Gateway Web UI" button
 
