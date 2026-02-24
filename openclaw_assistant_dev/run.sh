@@ -645,8 +645,45 @@ if [ -f /usr/local/lib/openclaw-proxy-shim.cjs ]; then
   export OPENCLAW_GLOBAL_NODE_MODULES
 fi
 
-echo "Starting OpenClaw Assistant gateway (openclaw)..."
-openclaw gateway run &
+echo "Starting OpenClaw Assistant runtime (openclaw)..."
+if [ "$GATEWAY_MODE" = "remote" ]; then
+  # Remote mode: do NOT start a local gateway service.
+  # Start a node/client host that connects to the configured remote gateway URL.
+  REMOTE_URL="$(timeout 2s openclaw config get gateway.remote.url 2>/dev/null | tr -d '\n' || true)"
+  if [ -z "$REMOTE_URL" ]; then
+    echo "ERROR: gateway_mode=remote but gateway.remote.url is empty in openclaw config"
+    echo "ERROR: Configure gateway.remote.url first, then restart the add-on"
+    exit 1
+  fi
+
+  NODE_HOST=""
+  NODE_PORT=""
+  NODE_TLS_FLAG=""
+  if ! eval "$(python3 - "$REMOTE_URL" <<'PY'
+import sys
+from urllib.parse import urlparse
+url = (sys.argv[1] or '').strip()
+p = urlparse(url)
+if p.scheme not in ('ws', 'wss') or not p.hostname:
+    print('echo "ERROR: Invalid gateway.remote.url (expected ws:// or wss://): %s"' % url.replace('"', '\\"'))
+    print('exit 1')
+    raise SystemExit(0)
+port = p.port or (443 if p.scheme == 'wss' else 80)
+print(f'NODE_HOST={p.hostname}')
+print(f'NODE_PORT={port}')
+print(f'NODE_TLS_FLAG={"--tls" if p.scheme == "wss" else ""}')
+PY
+)"; then
+    echo "ERROR: Failed to parse gateway.remote.url: $REMOTE_URL"
+    exit 1
+  fi
+
+  echo "INFO: gateway_mode=remote detected; starting node host to $NODE_HOST:$NODE_PORT ${NODE_TLS_FLAG}"
+  # shellcheck disable=SC2086
+  openclaw node run --host "$NODE_HOST" --port "$NODE_PORT" $NODE_TLS_FLAG &
+else
+  openclaw gateway run &
+fi
 GW_PID=$!
 
 # Start web terminal (optional)
