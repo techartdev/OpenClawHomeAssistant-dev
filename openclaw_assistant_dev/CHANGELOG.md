@@ -5,6 +5,7 @@ All notable changes to the OpenClaw Assistant Home Assistant Add-on will be docu
 ## [0.5.85] - 2026-02-24
 
 - Bump OpenClaw to 2026.2.23-2.
+- DOCS: add exact tested setup recipes for `lan_reverse_proxy` and tailnet flow (`tailnet_https` + HA Tailscale add-on + NPM).
 
 ## [0.5.84] - 2026-02-23
 
