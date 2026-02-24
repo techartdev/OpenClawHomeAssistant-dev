@@ -260,6 +260,7 @@ All options are set via **Settings → Apps/Add-ons → OpenClaw Assistant → C
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `gateway_mode` | `local` / `remote` | `local` | **local**: run gateway in this add-on. **remote**: connect to an external gateway |
+| `gateway_remote_url` | string | _(empty)_ | Remote gateway WebSocket URL used when `gateway_mode: remote` (example: `ws://192.168.1.20:18789` or `wss://gateway.example.com:443`) |
 | `gateway_bind_mode` | `loopback` / `lan` / `tailnet` | `loopback` | **loopback**: 127.0.0.1 only (secure). **lan**: all interfaces (LAN-accessible). **tailnet**: Tailscale interface only. Only applies when `gateway_mode` is `local` |
 | `gateway_port` | int | `18789` | Port for the gateway. Only applies when `gateway_mode` is `local` |
 | `access_mode` | `custom` / `local_only` / `lan_https` / `lan_reverse_proxy` / `tailnet_https` | `custom` | **Simplifies secure access setup.** `custom`: use individual settings (backward-compatible). `lan_https`: built-in HTTPS proxy for LAN (recommended for phones). `lan_reverse_proxy`: external reverse proxy. `tailnet_https`: Tailscale. `local_only`: Ingress only. See [Accessing the Gateway Web UI](#4-accessing-the-gateway-web-ui) |
@@ -267,11 +268,11 @@ All options are set via **Settings → Apps/Add-ons → OpenClaw Assistant → C
 | `enable_openai_api` | bool | `false` | Enable the OpenAI-compatible `/v1/chat/completions` endpoint. Required for [Assist pipeline integration](#6c-assist-pipeline-integration-openai-api) |
 | `gateway_auth_mode` | `token` / `trusted-proxy` | `token` | Gateway auth mode. Use `trusted-proxy` when terminating HTTPS in a reverse proxy and forwarding trusted auth headers. |
 | `gateway_trusted_proxies` | string | _(empty)_ | Comma-separated trusted proxy IP/CIDR list used with `gateway_auth_mode: trusted-proxy`. |
-
-When `gateway_auth_mode: trusted-proxy` is used, the add-on sets `gateway.auth.trustedProxy.userHeader` to `x-forwarded-user` by default.
 | `force_ipv4_dns` | bool | `true` | Force IPv4-first DNS ordering for Node network calls. **Recommended ON** — most HAOS VMs lack IPv6 egress, causing `web_fetch` and Telegram timeouts. Set to `false` only if your network has working IPv6. |
 | `gateway_env_vars` | list of `{name, value}` | `[]` | Environment variables exported to the gateway process at startup. UI format: list entries with `name` and `value` (example: `name=OPENAI_API_KEY`, `value=sk-...`). Limits: max 50 vars, key length 255, value length 10000. Reserved runtime keys are blocked (for example `PATH`, `HOME`, `NODE_OPTIONS`, `NODE_PATH`, `OPENCLAW_*`, proxy vars). Legacy string/object formats are still accepted for backward compatibility. |
 | `nginx_log_level` | `full` / `minimal` | `minimal` | Nginx access log verbosity. `minimal` suppresses repetitive Home Assistant health-check and polling requests (`GET /`, `GET /v1/models`). `full` logs everything. |
+
+When `gateway_auth_mode: trusted-proxy` is used, the add-on sets `gateway.auth.trustedProxy.userHeader` to `x-forwarded-user` by default.
 
 ### Terminal
 
@@ -346,14 +347,12 @@ This is the most common setup — accessing the Gateway Web UI from a browser on
 If you have an OpenClaw gateway running on a different machine (e.g., a more powerful server), you can configure this add-on to connect to it instead of running its own.
 
 1. Set `gateway_mode`: **remote**
-2. In the add-on terminal, configure the remote gateway URL:
-   ```sh
-   openclaw config set gateway.url <remote-gateway-url>
-   ```
+2. Set `gateway_remote_url` in add-on configuration (example: `wss://gateway.example.com:443`)
 3. Restart the add-on
 
 When `gateway_mode` is `remote`:
 - The add-on does **not** start a local gateway process
+- The add-on writes `gateway.remote.url` from `gateway_remote_url` on startup
 - `gateway_bind_mode` and `gateway_port` are ignored
 - The terminal and landing page still work normally
 - You still need the remote gateway's auth token
@@ -933,7 +932,7 @@ Yes. The add-on supports aarch64 (Raspberry Pi 4/5) and armv7 (Raspberry Pi 3). 
 OpenClaw supports multiple agent profiles. Configure them via `openclaw configure` or by editing `/config/.openclaw/openclaw.json`. The gateway serves all configured agents.
 
 **Can I use a remote gateway?**
-Yes. Set `gateway_mode` to `remote` and configure the remote gateway URL via `openclaw config set gateway.url <url>`. See [Remote Gateway Mode](#6b-remote-gateway-mode).
+Yes. Set `gateway_mode` to `remote` and set `gateway_remote_url` in add-on configuration. The add-on syncs it into OpenClaw config automatically. See [Remote Gateway Mode](#6b-remote-gateway-mode).
 
 **How do I change the AI model or provider?**
 Run `openclaw configure` in the terminal to reconfigure your AI providers, or edit `/config/.openclaw/openclaw.json` directly. You can use OpenAI, Google (Gemini), Anthropic (Claude), local models, and more.

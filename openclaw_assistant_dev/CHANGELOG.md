@@ -2,7 +2,7 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
-## [Unreleased]
+## [0.5.86] - 2026-02-24
 
 ### Fixed
 - `gateway_mode=remote` no longer crashes startup with `Gateway start blocked: set gateway.mode=local`.
