@@ -2,6 +2,15 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.89] - 2026-02-25
+
+### Fixed
+- In `lan_reverse_proxy` and other non-`lan_https` setups, Control UI origins now also include the origin derived from `gateway_public_url`.
+- `gateway.controlUi.allowedOrigins` configuration is now consistently applied via merge logic (defaults + existing values + user extras), reducing manual `openclaw.json` edits after upgrades.
+
+### Changed
+- Added startup guidance when `gateway_auth_mode=trusted-proxy` is enabled to clarify why direct local CLI gateway calls can show `trusted_proxy_user_missing`/unauthorized.
+
 ## [0.5.88] - 2026-02-25
 
 ### Fixed

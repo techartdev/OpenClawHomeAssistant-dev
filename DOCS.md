@@ -266,7 +266,7 @@ All options are set via **Settings → Apps/Add-ons → OpenClaw Assistant → C
 | `gateway_bind_mode` | `loopback` / `lan` / `tailnet` | `loopback` | **loopback**: 127.0.0.1 only (secure). **lan**: all interfaces (LAN-accessible). **tailnet**: Tailscale interface only. Only applies when `gateway_mode` is `local` |
 | `gateway_port` | int | `18789` | Port for the gateway. Only applies when `gateway_mode` is `local` |
 | `access_mode` | `custom` / `local_only` / `lan_https` / `lan_reverse_proxy` / `tailnet_https` | `custom` | **Simplifies secure access setup.** `custom`: use individual settings (backward-compatible). `lan_https`: built-in HTTPS proxy for LAN (recommended for phones). `lan_reverse_proxy`: external reverse proxy. `tailnet_https`: Tailscale. `local_only`: Ingress only. See [Accessing the Gateway Web UI](#4-accessing-the-gateway-web-ui) |
-| `gateway_public_url` | string | _(empty)_ | Public URL for the "Open Gateway Web UI" button. Auto-constructed in `lan_https` mode if empty. Example: `https://192.168.1.119:18789` |
+| `gateway_public_url` | string | _(empty)_ | Public URL for the "Open Gateway Web UI" button. Auto-constructed in `lan_https` mode if empty. Example: `https://192.168.1.119:18789`. In newer versions this origin is also merged into `gateway.controlUi.allowedOrigins` to reduce reverse-proxy origin errors. |
 | `enable_openai_api` | bool | `false` | Enable the OpenAI-compatible `/v1/chat/completions` endpoint. Required for [Assist pipeline integration](#6c-assist-pipeline-integration-openai-api) |
 | `gateway_auth_mode` | `token` / `trusted-proxy` | `token` | Gateway auth mode. Use `trusted-proxy` when terminating HTTPS in a reverse proxy and forwarding trusted auth headers. |
 | `gateway_trusted_proxies` | string | _(empty)_ | Comma-separated trusted proxy IP/CIDR list used with `gateway_auth_mode: trusted-proxy`. |
@@ -807,6 +807,16 @@ openclaw config get gateway.auth.token
 ```
 
 Paste this token when the UI prompts for authentication, or append it to the URL: `http://<ip>:18789/?token=<your-token>`
+
+### CLI shows unauthorized with `trusted_proxy_user_missing`
+
+**Symptom**: In add-on terminal, commands that open direct gateway WebSocket (for example some `openclaw status`/gateway probes) fail with unauthorized and logs mention `trusted_proxy_user_missing`.
+
+**Cause**: `gateway_auth_mode: trusted-proxy` expects identity headers from your reverse proxy. Direct local CLI connections are not proxied, so they may be rejected.
+
+**What to do**:
+- Keep `trusted-proxy` for browser traffic via your reverse proxy.
+- For local terminal workflows that require direct gateway auth, temporarily switch to `gateway_auth_mode: token` (or run via proxy path that injects trusted headers), then switch back if needed.
 
 ### Terminal not visible
 

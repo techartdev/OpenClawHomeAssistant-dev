@@ -553,11 +553,18 @@ else
   echo "INFO: Run 'openclaw onboard' first, then restart the add-on"
 fi
 
+if [ "$GATEWAY_AUTH_MODE" = "trusted-proxy" ]; then
+  echo "NOTICE: gateway_auth_mode=trusted-proxy is enabled."
+  echo "NOTICE: Direct local CLI calls to the gateway may return unauthorized (trusted_proxy_user_missing) unless identity headers are injected by your reverse proxy."
+  echo "NOTICE: For local terminal CLI workflows, temporarily switch to token auth or use commands that don't require direct gateway WS auth."
+fi
+
 # ------------------------------------------------------------------------------
 # TLS certificate generation for built-in HTTPS proxy (lan_https mode)
 # Generates a local CA + server cert so phones/tablets get proper HTTPS.
 # The CA cert can be installed once on a device for trusted access.
 # ------------------------------------------------------------------------------
+LAN_IP=""
 if [ "$ENABLE_HTTPS_PROXY" = "true" ]; then
   CERT_DIR="/config/certs"
   mkdir -p "$CERT_DIR"
@@ -607,32 +614,44 @@ SANEOF
   cp "$CERT_DIR/ca.crt" /etc/nginx/html/openclaw-ca.crt 2>/dev/null || true
   echo "INFO: CA certificate available for download at /cert/ca.crt on the HTTPS port"
 
-  # ------------------------------------------------------------------
-  # Configure gateway.controlUi for the HTTPS proxy:
-  #
-  # 1. allowedOrigins — the browser's HTTPS origin must be listed,
-  #    otherwise v2026.2.21+ rejects with 1008 "origin not allowed".
-  #
-  # 2. dangerouslyDisableDeviceAuth — skips the interactive device
-  #    pairing ceremony (1008 "pairing required").  In a self-hosted
-  #    add-on the user already controls the token, so per-device
-  #    approval adds friction without real security benefit.
-  #
-  #    NOTE: v2026.2.22+ emits a startup security warning when this
-  #    flag is active. The warning is expected and harmless for this
-  #    use case — run `openclaw security audit` for details.
-  #
-  # Also cleans up any stale keys (e.g. pairingMode) from older
-  # add-on versions that would cause "Unrecognized key" errors.
-  # ------------------------------------------------------------------
-  if [ -n "$LAN_IP" ] && [ -f "$HELPER_PATH" ] && [ -f "$OPENCLAW_CONFIG_PATH" ]; then
+fi
+
+# ------------------------------------------------------------------
+# Configure gateway.controlUi.allowedOrigins:
+# - In lan_https: include HTTPS proxy defaults (LAN IP + common hostnames)
+# - In all modes: also include origin from gateway_public_url when present
+# - Helper merges with existing origins + user extras and deduplicates
+# ------------------------------------------------------------------
+if [ -f "$HELPER_PATH" ] && [ -f "$OPENCLAW_CONFIG_PATH" ]; then
+  ALLOWED_ORIGINS=""
+
+  if [ "$ENABLE_HTTPS_PROXY" = "true" ] && [ -n "$LAN_IP" ]; then
     ALLOWED_ORIGINS="https://${LAN_IP}:${GATEWAY_PORT}"
-    # Also permit common mDNS/hostname variants so the cert SAN names work too
     ALLOWED_ORIGINS="${ALLOWED_ORIGINS},https://homeassistant.local:${GATEWAY_PORT}"
     ALLOWED_ORIGINS="${ALLOWED_ORIGINS},https://homeassistant:${GATEWAY_PORT}"
-    python3 "$HELPER_PATH" set-control-ui-origins "$ALLOWED_ORIGINS" "$GATEWAY_ADDITIONAL_ALLOWED_ORIGINS" || \
-      echo "WARN: Could not set controlUi settings — gateway may reject the Control UI"
   fi
+
+  if [ -n "$GW_PUBLIC_URL" ]; then
+    GW_PUBLIC_ORIGIN="$(python3 - "$GW_PUBLIC_URL" <<'PY'
+import sys
+from urllib.parse import urlparse
+u = (sys.argv[1] or '').strip()
+p = urlparse(u)
+if p.scheme in ('http', 'https') and p.netloc:
+    print(f"{p.scheme}://{p.netloc}", end='')
+PY
+)"
+    if [ -n "$GW_PUBLIC_ORIGIN" ]; then
+      if [ -n "$ALLOWED_ORIGINS" ]; then
+        ALLOWED_ORIGINS="${ALLOWED_ORIGINS},${GW_PUBLIC_ORIGIN}"
+      else
+        ALLOWED_ORIGINS="$GW_PUBLIC_ORIGIN"
+      fi
+    fi
+  fi
+
+  python3 "$HELPER_PATH" set-control-ui-origins "$ALLOWED_ORIGINS" "$GATEWAY_ADDITIONAL_ALLOWED_ORIGINS" || \
+    echo "WARN: Could not set controlUi settings — gateway may reject the Control UI"
 fi
 
 # ------------------------------------------------------------------------------
