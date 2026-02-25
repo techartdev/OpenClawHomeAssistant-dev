@@ -2,6 +2,15 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.87] - 2026-02-25
+
+### Added
+- New add-on option `gateway_additional_allowed_origins` for extra Control UI origins in `lan_https` mode.
+
+### Fixed
+- `lan_https` startup no longer overwrites `gateway.controlUi.allowedOrigins` with defaults only.
+- Control UI origins are now merged as: built-in defaults + existing config values + `gateway_additional_allowed_origins` (deduplicated).
+
 ## [0.5.86] - 2026-02-24
 
 ### Fixed

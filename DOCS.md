@@ -268,6 +268,7 @@ All options are set via **Settings → Apps/Add-ons → OpenClaw Assistant → C
 | `enable_openai_api` | bool | `false` | Enable the OpenAI-compatible `/v1/chat/completions` endpoint. Required for [Assist pipeline integration](#6c-assist-pipeline-integration-openai-api) |
 | `gateway_auth_mode` | `token` / `trusted-proxy` | `token` | Gateway auth mode. Use `trusted-proxy` when terminating HTTPS in a reverse proxy and forwarding trusted auth headers. |
 | `gateway_trusted_proxies` | string | _(empty)_ | Comma-separated trusted proxy IP/CIDR list used with `gateway_auth_mode: trusted-proxy`. |
+| `gateway_additional_allowed_origins` | string | _(empty)_ | Comma-separated additional origins merged into `gateway.controlUi.allowedOrigins` in `lan_https` mode (example: `https://ha.example.com:8443,capacitor://localhost`). |
 | `force_ipv4_dns` | bool | `true` | Force IPv4-first DNS ordering for Node network calls. **Recommended ON** — most HAOS VMs lack IPv6 egress, causing `web_fetch` and Telegram timeouts. Set to `false` only if your network has working IPv6. |
 | `gateway_env_vars` | list of `{name, value}` | `[]` | Environment variables exported to the gateway process at startup. UI format: list entries with `name` and `value` (example: `name=OPENAI_API_KEY`, `value=sk-...`). Limits: max 50 vars, key length 255, value length 10000. Reserved runtime keys are blocked (for example `PATH`, `HOME`, `NODE_OPTIONS`, `NODE_PATH`, `OPENCLAW_*`, proxy vars). Legacy string/object formats are still accepted for backward compatibility. |
 | `nginx_log_level` | `full` / `minimal` | `minimal` | Nginx access log verbosity. `minimal` suppresses repetitive Home Assistant health-check and polling requests (`GET /`, `GET /v1/models`). `full` logs everything. |
@@ -756,17 +757,15 @@ Go to **Settings → Add-ons → OpenClaw Assistant → Log** tab. Logs show sta
 
 **Cause**: OpenClaw v2026.2.21+ checks the browser's `Origin` header against an allow-list. When using the built-in HTTPS proxy (`lan_https`), the origin (`https://<ip>:<port>`) must be registered in `gateway.controlUi.allowedOrigins`.
 
-**Fix**: In **v0.5.78+** this is configured automatically on startup. If you still see the error:
-1. Restart the add-on (the startup script detects the LAN IP and sets the origins).
-2. If the IP has changed since you last started, restart again — the cert and origins are regenerated.
-3. **Manual override** (from the add-on terminal):
+**Fix**: In **v0.5.78+** defaults are configured automatically on startup. In **v0.5.87+**, the add-on now merges defaults with existing values and user extras.
+1. Restart the add-on (the startup script detects LAN IP and updates origins).
+2. If needed, set `gateway_additional_allowed_origins` in add-on configuration (comma-separated), then restart.
+3. If the IP has changed since you last started, restart again — the cert and defaults are refreshed.
+4. **Manual override** (advanced, from the add-on terminal):
    ```sh
    openclaw config set gateway.controlUi.allowedOrigins '["https://192.168.1.10:18789"]'
    ```
-   Replace the IP and port with your actual values, then restart the gateway:
-   ```sh
-   openclaw gateway restart
-   ```
+   Then restart the add-on to re-merge defaults + extras.
 
 ### "disconnected (1008): pairing required"
 

@@ -181,7 +181,7 @@ def apply_gateway_settings(mode: str, remote_url: str, bind_mode: str, port: int
         return True
 
 
-def set_control_ui_origins(origins_csv: str):
+def set_control_ui_origins(origins_csv: str, additional_origins_csv: str = ""): 
     """
     Configure gateway.controlUi for the built-in HTTPS proxy.
 
@@ -197,8 +197,8 @@ def set_control_ui_origins(origins_csv: str):
     been written by earlier add-on versions.
 
     Args:
-        origins_csv: Comma-separated list of allowed origins.
-                     Pass an empty string to clear / leave unset.
+        origins_csv: Comma-separated list of default origins provided by the add-on.
+        additional_origins_csv: Comma-separated list of user-provided extra origins.
     """
     cfg = read_config()
     if cfg is None:
@@ -212,14 +212,23 @@ def set_control_ui_origins(origins_csv: str):
         gateway["controlUi"] = {}
 
     control_ui = gateway["controlUi"]
-    origins = [o.strip() for o in origins_csv.split(",") if o.strip()]
+    default_origins = [o.strip() for o in origins_csv.split(",") if o.strip()]
+    additional_origins = [o.strip() for o in (additional_origins_csv or "").split(",") if o.strip()]
     changes = []
 
     # --- allowedOrigins ---
     current_origins = control_ui.get("allowedOrigins", [])
-    if current_origins != origins:
-        control_ui["allowedOrigins"] = origins
-        changes.append(f"allowedOrigins: {current_origins} -> {origins}")
+    if not isinstance(current_origins, list):
+        current_origins = []
+
+    merged_origins = []
+    for origin in [*default_origins, *current_origins, *additional_origins]:
+        if isinstance(origin, str) and origin and origin not in merged_origins:
+            merged_origins.append(origin)
+
+    if current_origins != merged_origins:
+        control_ui["allowedOrigins"] = merged_origins
+        changes.append(f"allowedOrigins: {current_origins} -> {merged_origins}")
 
     # --- dangerouslyDisableDeviceAuth ---
     # Skips the interactive pairing handshake (error 1008: pairing required).
@@ -235,7 +244,7 @@ def set_control_ui_origins(origins_csv: str):
             changes.append(f"removed invalid key: {stale_key}")
 
     if not changes:
-        print(f"INFO: controlUi already correct: origins={origins}, deviceAuth=disabled")
+        print(f"INFO: controlUi already correct: origins={merged_origins}, deviceAuth=disabled")
         return True
 
     if write_config(cfg):
@@ -278,11 +287,12 @@ def main():
         sys.exit(0)
     
     elif cmd == "set-control-ui-origins":
-        if len(sys.argv) != 3:
-            print("Usage: oc_config_helper.py set-control-ui-origins <origins_csv>")
+        if len(sys.argv) not in (3, 4):
+            print("Usage: oc_config_helper.py set-control-ui-origins <origins_csv> [additional_origins_csv]")
             sys.exit(1)
         origins_csv = sys.argv[2]
-        success = set_control_ui_origins(origins_csv)
+        additional_origins_csv = sys.argv[3] if len(sys.argv) == 4 else ""
+        success = set_control_ui_origins(origins_csv, additional_origins_csv)
         sys.exit(0 if success else 1)
 
     elif cmd == "set":
