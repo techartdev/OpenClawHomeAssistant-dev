@@ -2,6 +2,12 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.88] - 2026-02-25
+
+### Fixed
+- Add-on no longer exits/restarts when OpenClaw runtime process is restarted during onboarding or config changes.
+- `run.sh` now supervises the OpenClaw runtime (`openclaw gateway run` / `openclaw node run`) and auto-restarts it while keeping nginx + terminal alive.
+
 ## [0.5.87] - 2026-02-25
 
 ### Added

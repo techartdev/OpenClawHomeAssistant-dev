@@ -89,6 +89,8 @@ openclaw onboard
 
 This interactive wizard walks you through connecting your AI providers (OpenAI, Google, Anthropic, etc.) and basic configuration.
 
+> **Note (v0.5.88+)**: If onboarding triggers a gateway runtime restart, the add-on now keeps nginx/terminal alive and auto-recovers the runtime instead of restarting the whole container.
+
 Alternatively, for more granular control:
 
 ```sh
