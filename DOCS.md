@@ -102,8 +102,10 @@ openclaw configure
 The gateway requires a token for authentication. To retrieve it:
 
 ```sh
-openclaw config get gateway.auth.token
+jq -r '.gateway.auth.token' /config/.openclaw/openclaw.json
 ```
+
+> **Note**: Since OpenClaw v2026.2.22+ `openclaw config get` redacts sensitive values (returns `openclaw_redacted`). Read the token directly from the config file with `jq` as shown above.
 
 Save this token — you'll need it to access the Gateway Web UI and for API integrations.
 
@@ -242,8 +244,10 @@ This means the browser is connecting over plain HTTP. **Solutions**:
 If the Gateway UI shows **Unauthorized**, re-check your token:
 
 ```sh
-openclaw config get gateway.auth.token
+jq -r '.gateway.auth.token' /config/.openclaw/openclaw.json
 ```
+
+> **Note**: Since OpenClaw v2026.2.22+ `openclaw config get` redacts sensitive values — use `jq` to read directly from the config file.
 
 ---
 
@@ -451,7 +455,7 @@ openclaw config set gateway.http.endpoints.chatCompletions.enabled true
 1. Go to **Settings → Devices & Services → Add Integration**
 2. Search for **Extended OpenAI Conversation**
 3. Configure:
-   - **API Key**: your gateway token (`openclaw config get gateway.auth.token`)
+   - **API Key**: your gateway token — run `jq -r '.gateway.auth.token' /config/.openclaw/openclaw.json` in the terminal
    - **Base URL**: `http://127.0.0.1:18789/v1`
    - **API Version**: leave empty
    - **Organization**: leave empty
@@ -803,8 +807,10 @@ Go to **Settings → Add-ons → OpenClaw Assistant → Log** tab. Logs show sta
 **Fix**: Get the correct token and use it:
 
 ```sh
-openclaw config get gateway.auth.token
+jq -r '.gateway.auth.token' /config/.openclaw/openclaw.json
 ```
+
+> **Note**: Since OpenClaw v2026.2.22+ `openclaw config get` redacts sensitive values (returns `openclaw_redacted`). Use `jq` to read the token directly from the config file.
 
 Paste this token when the UI prompts for authentication, or append it to the URL: `http://<ip>:18789/?token=<your-token>`
 

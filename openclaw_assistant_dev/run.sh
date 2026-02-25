@@ -584,16 +584,46 @@ if [ "$ENABLE_HTTPS_PROXY" = "true" ]; then
     echo "INFO: Local CA created at $CERT_DIR/ca.crt"
   fi
 
-  # --- Server cert (regenerated when LAN IP changes) ---
-  if [ ! -f "$CERT_DIR/gateway.crt" ] || [ ! -f "$CERT_DIR/gateway.key" ] || [ "$LAN_IP" != "$STORED_IP" ]; then
+  # --- Extra SANs from gateway_additional_allowed_origins + gateway_public_url ---
+  EXTRA_SANS=""
+  EXTRA_SAN_SOURCES="${GATEWAY_ADDITIONAL_ALLOWED_ORIGINS},${GW_PUBLIC_URL}"
+  if [ "$EXTRA_SAN_SOURCES" != "," ]; then
+    EXTRA_SANS="$(python3 - "$EXTRA_SAN_SOURCES" "${LAN_IP:-}" <<'PY'
+import sys, re
+from urllib.parse import urlparse
+raw = sys.argv[1] if len(sys.argv) > 1 else ""
+lan_ip = sys.argv[2] if len(sys.argv) > 2 else ""
+entries = [e.strip() for e in raw.split(",") if e.strip()]
+sans = []
+seen = {"127.0.0.1", "localhost", "homeassistant", "homeassistant.local"}
+if lan_ip:
+    seen.add(lan_ip)
+for entry in entries:
+    if "://" not in entry:
+        entry = "https://" + entry
+    host = urlparse(entry).hostname or ""
+    if host and host not in seen:
+        seen.add(host)
+        if re.match(r"^\d{1,3}(\.\d{1,3}){3}$", host):
+            sans.append(f"IP:{host}")
+        else:
+            sans.append(f"DNS:{host}")
+print(",".join(sans), end="")
+PY
+)"
+  fi
+  STORED_EXTRA_SANS=$(cat "$CERT_DIR/.cert_extra_sans" 2>/dev/null || echo "")
+
+  # --- Server cert (regenerated when LAN IP or SANs change) ---
+  if [ ! -f "$CERT_DIR/gateway.crt" ] || [ ! -f "$CERT_DIR/gateway.key" ] || [ "$LAN_IP" != "$STORED_IP" ] || [ "$EXTRA_SANS" != "$STORED_EXTRA_SANS" ]; then
     echo "INFO: Generating server TLS certificate for IP: ${LAN_IP:-unknown}..."
     openssl genrsa -out "$CERT_DIR/gateway.key" 2048 2>/dev/null
     openssl req -new -key "$CERT_DIR/gateway.key" -out "$CERT_DIR/gateway.csr" \
       -subj "/CN=OpenClaw Gateway" 2>/dev/null
 
-    # SAN extension — include LAN IP, loopback, and common mDNS names
+    # SAN extension — include LAN IP, loopback, common mDNS names + user extras
     cat > "$CERT_DIR/_san.ext" <<SANEOF
-subjectAltName=IP:${LAN_IP:-127.0.0.1},IP:127.0.0.1,DNS:localhost,DNS:homeassistant,DNS:homeassistant.local
+subjectAltName=IP:${LAN_IP:-127.0.0.1},IP:127.0.0.1,DNS:localhost,DNS:homeassistant,DNS:homeassistant.local${EXTRA_SANS:+,${EXTRA_SANS}}
 SANEOF
 
     openssl x509 -req -in "$CERT_DIR/gateway.csr" \
@@ -604,7 +634,8 @@ SANEOF
     rm -f "$CERT_DIR/gateway.csr" "$CERT_DIR/_san.ext" "$CERT_DIR/ca.srl"
     chmod 600 "$CERT_DIR/gateway.key"
     printf '%s' "$LAN_IP" > "$CERT_DIR/.cert_ip"
-    echo "INFO: Server TLS certificate generated (SAN includes IP:${LAN_IP:-127.0.0.1})"
+    printf '%s' "$EXTRA_SANS" > "$CERT_DIR/.cert_extra_sans"
+    echo "INFO: Server TLS certificate generated (SAN: IP:${LAN_IP:-127.0.0.1}${EXTRA_SANS:+,${EXTRA_SANS}})"
   else
     echo "INFO: Reusing existing TLS certificate (IP: $STORED_IP)"
   fi
@@ -784,8 +815,12 @@ fi
 
 # Render nginx config from template.
 # The gateway token is NOT managed by the add-on; OpenClaw will generate/store it.
-# Best-effort: query it via CLI (works even if openclaw.json is JSON5). If unknown, we hide the button.
-GW_TOKEN="$(timeout 2s openclaw config get gateway.auth.token 2>/dev/null | tr -d '\n' || true)"
+# Read directly from config file — the CLI redacts secrets since v2026.2.22+.
+GW_TOKEN="$(python3 -c "
+import json, os
+p = os.environ.get('OPENCLAW_CONFIG_PATH', '/config/.openclaw/openclaw.json')
+print(json.load(open(p)).get('gateway',{}).get('auth',{}).get('token',''), end='')
+" 2>/dev/null || true)"
 
 # Collect disk usage for landing page status card
 DISK_TOTAL="" DISK_USED="" DISK_AVAIL="" DISK_PCT=""

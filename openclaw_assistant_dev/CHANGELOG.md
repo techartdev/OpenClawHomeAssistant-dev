@@ -2,6 +2,15 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.90] - 2026-02-25
+
+### Fixed
+- **Gateway token on landing page**: read token directly from `openclaw.json` instead of via `openclaw config get` which redacts secrets since OpenClaw v2026.2.22+ (fixes "Open Gateway Web UI" button sending `openclaw_redacted` as the token).
+- **Token retrieval instructions**: all "get your token" references in the landing page and DOCS now use `jq -r '.gateway.auth.token' /config/.openclaw/openclaw.json` with a note explaining why the old `openclaw config get` command no longer works.
+
+### Added
+- **Custom SANs in TLS certificate** (`lan_https` mode): hostnames and IPs from `gateway_additional_allowed_origins` and `gateway_public_url` are now included in the server certificate's Subject Alternative Name. The certificate auto-regenerates when SANs change.
+
 ## [0.5.89] - 2026-02-25
 
 ### Fixed

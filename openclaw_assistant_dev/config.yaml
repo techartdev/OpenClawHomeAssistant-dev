@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.89"
+version: "0.5.90"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant
@@ -93,8 +93,10 @@ options:
   # Example: "127.0.0.1,192.168.88.0/24"
   gateway_trusted_proxies: ""
 
-  # Additional allowed origins for gateway.controlUi.allowedOrigins (lan_https mode).
-  # These are merged with built-in defaults and existing configured origins.
+  # Additional allowed origins for gateway.controlUi.allowedOrigins.
+  # Merged with built-in defaults and existing configured origins.
+  # In lan_https mode, hostnames/IPs from these origins are also added to the
+  # TLS certificate SAN so the cert is valid for custom domains.
   # Example: "https://ha.example.com:8443,capacitor://localhost"
   gateway_additional_allowed_origins: ""
 
