@@ -2,6 +2,22 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.98] - 2026-06-05
+
+### Changed
+- Sync the DEV add-on with the missing stable-repo improvements from the official `main` branch.
+- Pin bundled OpenClaw to `2026.5.22` for now, matching the stable safety rollback while Telegram/cron regressions in `2026.5.27` are investigated.
+- Add backup-friendly persistence toggles: `persist_node_global` and `persist_brew_tools` now default to `false`.
+- Bundle `node-llama-cpp` and `cmake` in the image so local embeddings/memory work out of the box on HAOS.
+
+### Added
+- Add the add-on-native `oc-gateway` helper for status/restart flows that match the `run.sh` supervisor model.
+- Bring over the official GitHub issue templates, release Discord workflow, and add-on artwork/metadata updates.
+
+### Fixed
+- Repair persisted OpenClaw configs that still set unsupported `tools.web.search.provider=brave`, preventing startup failures after upgrades.
+- Correct changelog chronology/documentation drift while syncing the DEV channel with the official repo.
+
 ## [0.5.97] - 2026-04-04
 
 ### Changed
@@ -10,7 +26,7 @@ All notable changes to the OpenClaw Assistant Home Assistant Add-on will be docu
 ### Fixed
 - **"Open Gateway Web UI" button missing token on first boot / post-onboard** (issue #102): the gateway token was read once at startup, before `openclaw onboard` had a chance to write `openclaw.json`. The landing page now re-renders automatically in the background (up to ~2 min after startup) once the token appears in `openclaw.json`, and nginx is reloaded with SIGHUP — no add-on restart required.
 
-## [0.5.96] - 2026-03-01
+## [0.5.96] - 2026-03-14
 
 - Bump OpenClaw to 2026.3.13.
 

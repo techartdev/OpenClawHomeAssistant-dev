@@ -1,21 +1,17 @@
 # OpenClaw Assistant – Home Assistant Add-on (DEV)
 
 ## [Join our Discord Server!](https://discord.gg/xeHeKu9jYp)
+<img width="1038" height="597" alt="image" src="https://github.com/user-attachments/assets/6dae3918-7bad-4e89-9695-c7f549e8abda" />
+<img width="1536" height="542" alt="ChatGPT Image Feb 25, 2026, 11_37_02 PM" src="https://github.com/user-attachments/assets/ea662d87-5414-4c01-ac48-cb8f731a4988" />
 
-Run [OpenClaw](https://github.com/openclaw/openclaw) as a Home Assistant add-on — fully self-contained with a web terminal, AI gateway, and all dependencies included.
 
-> **This is the DEV / experimental channel.** It may contain breaking changes and is updated more frequently. For the stable release, use: [techartdev/OpenClawHomeAssistant](https://github.com/techartdev/OpenClawHomeAssistant)
+### OpenClaw Home Assistant integration is available now!  https://github.com/techartdev/OpenClawHomeAssistantIntegration
 
-## Quick Start
+This repository contains a Home Assistant add-on that runs **OpenClaw** inside **Home Assistant OS (HAOS)**.
 
-1. **Add the repository**: Settings → Add-ons → Add-on store → ⋮ → Repositories → paste:
-   ```
-   https://github.com/techartdev/OpenClawHomeAssistant-dev
-   ```
-2. **Install** OpenClaw Assistant (DEV)
-3. **Start** the add-on
-4. **Open** the add-on page — you'll see a terminal
-5. **Run** `openclaw onboard` in the terminal to set up your AI providers
+> **This is the DEV / experimental channel.** It tracks the stable add-on closely, but can ship changes earlier and may break. For the stable release, use: [techartdev/OpenClawHomeAssistant](https://github.com/techartdev/OpenClawHomeAssistant)
+
+> Upstream rename history (FYI): clawdbot → moltbot → **openclaw** (final).
 
 ## Key Features
 
@@ -24,7 +20,7 @@ Run [OpenClaw](https://github.com/openclaw/openclaw) as a Home Assistant add-on 
 - **Assist Pipeline** — use OpenClaw as a conversation agent via the OpenAI-compatible API
 - **Browser Automation** — Chromium included for web scraping and automation skills
 - **Proxy Support** — optional outbound `http_proxy` setting for HTTP/HTTPS traffic
-- **Persistent Storage** — skills, config, and workspace survive add-on updates
+- **Persistent Storage** — config/workspace persist; npm/Homebrew tool persistence is now opt-in to keep backups smaller
 - **Bundled Tools** — git, vim, nano, bat, fd, ripgrep, curl, jq, python3, pnpm, Homebrew
 
 ## Supported Architectures
@@ -39,3 +35,20 @@ Run [OpenClaw](https://github.com/openclaw/openclaw) as a Home Assistant add-on 
 
 - **[Full documentation →](DOCS.md)** — installation, configuration, use cases, troubleshooting, and more
 - **[Security Risks & Disclaimer →](SECURITY.md)** — important risks to understand before using this add-on
+
+## Install
+
+1. Home Assistant → **Settings → Add-ons → Add-on store**
+2. **⋮ → Repositories**
+3. Add this repo:
+   - `https://github.com/techartdev/OpenClawHomeAssistant-dev`
+4. Install **OpenClaw Assistant (DEV)**
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=techartdev/OpenClawHomeAssistant&type=date&legend=top-left)](https://www.star-history.com/#techartdev/OpenClawHomeAssistant&type=date&legend=top-left)
+
+## Support / Donations
+
+If you find this useful and you want to bring me a coffee to make more useful things, or support the project, use the link below:
+- https://revolut.me/vanyo6dhw
