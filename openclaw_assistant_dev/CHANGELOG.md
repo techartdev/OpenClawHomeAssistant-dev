@@ -2,6 +2,15 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.100] - 2026-06-26
+
+### Changed
+- Sync the DEV add-on with the latest stable `main` repo runtime bump.
+- Bump bundled OpenClaw from `2026.6.9` to `2026.6.10`.
+
+### Added
+- Fold in the stable changelog coverage for the upstream `2026.6.10` add-on release so the DEV channel stays aligned with the current merged official runtime.
+
 ## [0.5.99] - 2026-06-25
 
 ### Changed
