@@ -2,6 +2,20 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.101] - 2026-07-16
+
+### Changed
+- Sync the DEV add-on forward to the current stable runtime baseline and bump bundled OpenClaw from `2026.6.10` to `2026.7.1`.
+- Move the DEV add-on image from Node 22 to Node 24 so it stays within OpenClaw's published support matrix and can use the current `mcporter` line.
+
+### Added
+- Bundle `mcporter@0.12.3` in the DEV add-on image so Home Assistant MCP auto-configuration works out of the box for testing.
+
+### Fixed
+- Repair startup automatically when the persisted `/config/.openclaw/openclaw.json` was last touched by a newer OpenClaw runtime than the rebuilt image currently bundles.
+- Regenerate malformed `lan_https` CA/server certificates with proper X.509 extensions so Python/OpenSSL strict verification accepts them.
+- Replace the misleading MCP startup hint that told users to run `openclaw onboard` when the `mcporter` CLI was missing from the image.
+
 ## [0.5.100] - 2026-06-26
 
 ### Changed
