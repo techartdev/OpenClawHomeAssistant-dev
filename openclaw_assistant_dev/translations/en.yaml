@@ -42,6 +42,14 @@ configuration:
   clean_session_locks_on_exit:
     name: Clean Session Locks on Exit
     description: Cleanup session lock files when add-on stops gracefully
+
+  persist_node_global:
+    name: Persist npm Global Skills
+    description: When ON, store user-installed npm skills and global packages under /config/.node_global so they survive add-on rebuilds. Default OFF to keep Home Assistant backups smaller.
+
+  persist_brew_tools:
+    name: Persist Homebrew Tools
+    description: When ON, store Homebrew and brew-installed CLI tools under /config/.linuxbrew so they survive add-on rebuilds. Default OFF to keep Home Assistant backups smaller.
   
   gateway_mode:
     name: Gateway Mode
@@ -113,3 +121,24 @@ configuration:
   auto_configure_mcp:
     name: Auto-Configure MCP for Home Assistant
     description: "When ON and Home Assistant Token is set, automatically registers Home Assistant as an MCP server on each startup. This lets OpenClaw control HA entities, services, and automations via the Model Context Protocol. Disable only if you manage mcporter configuration manually."
+
+  resource_profile:
+    name: Resource Profile
+    description: "Keeps the add-on well behaved on low-power hardware by capping the Node.js heap used by the gateway. 'auto' (recommended) picks a profile from CPU architecture and total RAM and never changes your OpenClaw configuration. 'low' additionally disables OpenClaw browser automation, but only for settings you have not already chosen yourself."
+    options:
+      auto: "Auto (detect from hardware)"
+      low: "Low (Raspberry Pi / under 2 GB RAM)"
+      balanced: "Balanced (2-6 GB RAM)"
+      high: "High (no heap limit)"
+
+  ha_health_sensors:
+    name: Publish Health Sensors
+    description: Publish gateway status, OpenClaw version, gateway memory, disk usage and TLS certificate expiry as Home Assistant sensor entities (sensor.openclaw_*) so you can build automations and alerts on them. Requires Home Assistant Token to be set.
+
+  ha_health_interval:
+    name: Health Sensor Interval
+    description: How often (in seconds) the health sensors are refreshed. Range 15-3600, default 60.
+
+  config_backup_keep:
+    name: Config Snapshots to Keep
+    description: How many openclaw.json snapshots to keep in /config/.openclaw/backups. A snapshot is taken before the add-on's first configuration write on each start, so unwanted changes can be rolled back with 'oc-config restore'. Set to 0 to disable snapshots.

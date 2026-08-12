@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.101"
+version: "0.5.102"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant-dev
@@ -19,6 +19,11 @@ ingress: true
 ingress_port: 48099
 panel_title: OpenClaw Assistant
 panel_icon: mdi:robot
+
+# Liveness probe for the Supervisor: the ingress proxy (nginx) is the add-on's
+# front door, so a dead listener means the add-on page is broken.
+# Users can turn this off with the Watchdog toggle on the add-on page.
+watchdog: tcp://[HOST]:48099
 
 map:
   - addon_config:rw
@@ -143,6 +148,28 @@ options:
   # MCP server in OpenClaw so the AI can control Home Assistant entities/services.
   auto_configure_mcp: false
 
+  # Resource profile — keeps the add-on well-behaved on low-power hardware.
+  # auto:     detect from CPU architecture and total RAM (recommended)
+  # low:      smallest Node heap; also disables OpenClaw browser automation
+  #           (only for keys you have not set yourself in openclaw.json)
+  # balanced: moderate Node heap for 2-6 GB systems
+  # high:     no heap cap; leaves Node's own default in place
+  # Only 'low' selected explicitly writes to openclaw.json; 'auto' never does.
+  resource_profile: auto
+
+  # Publish gateway status, version, memory, disk usage and certificate expiry
+  # as Home Assistant sensor entities (sensor.openclaw_*) so you can alert on
+  # them. Requires homeassistant_token to be set.
+  ha_health_sensors: false
+
+  # How often (seconds) to refresh the health sensors. Range 15-3600.
+  ha_health_interval: 60
+
+  # How many openclaw.json snapshots to keep in /config/.openclaw/backups.
+  # A snapshot is taken before the add-on's first config write of each start,
+  # so a bad change can be rolled back with 'oc-config restore'. 0 disables.
+  config_backup_keep: 10
+
 
 schema:
   timezone: str
@@ -176,3 +203,7 @@ schema:
       value: str
   nginx_log_level: list(full|minimal)?
   auto_configure_mcp: bool?
+  resource_profile: list(auto|low|balanced|high)?
+  ha_health_sensors: bool?
+  ha_health_interval: int(15,3600)?
+  config_backup_keep: int(0,100)?

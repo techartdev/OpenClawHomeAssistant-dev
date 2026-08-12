@@ -42,6 +42,14 @@ configuration:
   clean_session_locks_on_exit:
     name: Sitzungssperren beim Beenden bereinigen
     description: Sitzungssperrdateien beim ordnungsgemäßen Stoppen des Add-ons bereinigen
+
+  persist_node_global:
+    name: npm-Globale Skills dauerhaft speichern
+    description: Wenn EIN, werden benutzerinstallierte npm-Skills und globale Pakete unter /config/.node_global gespeichert und über Add-on-Neubuilds hinweg behalten. Standard ist AUS, um Home-Assistant-Backups klein zu halten.
+
+  persist_brew_tools:
+    name: Homebrew-Tools dauerhaft speichern
+    description: Wenn EIN, werden Homebrew und per brew installierte CLI-Tools unter /config/.linuxbrew gespeichert und über Add-on-Neubuilds hinweg behalten. Standard ist AUS, um Home-Assistant-Backups klein zu halten.
   
   gateway_mode:
     name: Gateway-Modus
@@ -113,3 +121,24 @@ configuration:
   auto_configure_mcp:
     name: MCP für Home Assistant automatisch konfigurieren
     description: "Wenn AN und Home Assistant Token gesetzt ist, wird Home Assistant bei jedem Start automatisch als MCP-Server registriert. Das erlaubt OpenClaw, HA-Geräte, -Dienste und -Automatisierungen über das Model Context Protocol zu steuern. Nur deaktivieren, wenn Sie die mcporter-Konfiguration manuell verwalten."
+
+  resource_profile:
+    name: Ressourcenprofil
+    description: "Hält das Add-on auf leistungsschwacher Hardware im Rahmen, indem der vom Gateway genutzte Node.js-Heap begrenzt wird. 'auto' (empfohlen) wählt das Profil anhand von CPU-Architektur und Gesamt-RAM und ändert Ihre OpenClaw-Konfiguration nie. 'low' deaktiviert zusätzlich die Browser-Automatisierung, aber nur bei Einstellungen, die Sie nicht selbst gesetzt haben."
+    options:
+      auto: "Automatisch (anhand der Hardware)"
+      low: "Niedrig (Raspberry Pi / unter 2 GB RAM)"
+      balanced: "Ausgewogen (2-6 GB RAM)"
+      high: "Hoch (kein Heap-Limit)"
+
+  ha_health_sensors:
+    name: Health-Sensoren veröffentlichen
+    description: Veröffentlicht Gateway-Status, OpenClaw-Version, Gateway-Speicherverbrauch, Speicherplatzbelegung und Ablauf des TLS-Zertifikats als Home-Assistant-Sensoren (sensor.openclaw_*), damit Sie darauf Automatisierungen und Benachrichtigungen aufbauen können. Erfordert einen gesetzten Home Assistant Token.
+
+  ha_health_interval:
+    name: Intervall der Health-Sensoren
+    description: Wie oft (in Sekunden) die Health-Sensoren aktualisiert werden. Bereich 15-3600, Standard 60.
+
+  config_backup_keep:
+    name: Aufzubewahrende Konfigurations-Snapshots
+    description: Wie viele openclaw.json-Snapshots in /config/.openclaw/backups aufbewahrt werden. Vor dem ersten Konfigurationsschreibvorgang jedes Starts wird ein Snapshot erstellt, sodass unerwünschte Änderungen mit 'oc-config restore' rückgängig gemacht werden können. 0 deaktiviert Snapshots.

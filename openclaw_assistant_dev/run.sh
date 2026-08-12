@@ -61,11 +61,124 @@ FORCE_IPV4_DNS=$(jq -r '.force_ipv4_dns // true' "$OPTIONS_FILE")
 ACCESS_MODE=$(jq -r '.access_mode // "custom"' "$OPTIONS_FILE")
 NGINX_LOG_LEVEL=$(jq -r '.nginx_log_level // "minimal"' "$OPTIONS_FILE")
 AUTO_CONFIGURE_MCP=$(jq -r '.auto_configure_mcp // false' "$OPTIONS_FILE")
+RESOURCE_PROFILE=$(jq -r '.resource_profile // "auto"' "$OPTIONS_FILE")
+HA_HEALTH_SENSORS=$(jq -r '.ha_health_sensors // false' "$OPTIONS_FILE")
+HA_HEALTH_INTERVAL_RAW=$(jq -r '.ha_health_interval // 60' "$OPTIONS_FILE")
+CONFIG_BACKUP_KEEP_RAW=$(jq -r '.config_backup_keep // 10' "$OPTIONS_FILE")
 GW_ENV_VARS_TYPE=$(jq -r 'if .gateway_env_vars == null then "null" else (.gateway_env_vars | type) end' "$OPTIONS_FILE")
 GW_ENV_VARS_RAW=$(jq -r '.gateway_env_vars // empty' "$OPTIONS_FILE")
 GW_ENV_VARS_JSON=$(jq -c '.gateway_env_vars // []' "$OPTIONS_FILE")
 
 export TZ="$TZNAME"
+
+# SECURITY/SANITY: validate numeric options before they reach loops or Python.
+if [[ "$HA_HEALTH_INTERVAL_RAW" =~ ^[0-9]+$ ]] && [ "$HA_HEALTH_INTERVAL_RAW" -ge 15 ] && [ "$HA_HEALTH_INTERVAL_RAW" -le 3600 ]; then
+  HA_HEALTH_INTERVAL="$HA_HEALTH_INTERVAL_RAW"
+else
+  echo "WARN: Invalid ha_health_interval '$HA_HEALTH_INTERVAL_RAW'. Must be 15-3600. Using default 60."
+  HA_HEALTH_INTERVAL="60"
+fi
+
+if [[ "$CONFIG_BACKUP_KEEP_RAW" =~ ^[0-9]+$ ]] && [ "$CONFIG_BACKUP_KEEP_RAW" -le 100 ]; then
+  CONFIG_BACKUP_KEEP="$CONFIG_BACKUP_KEEP_RAW"
+else
+  echo "WARN: Invalid config_backup_keep '$CONFIG_BACKUP_KEEP_RAW'. Must be 0-100. Using default 10."
+  CONFIG_BACKUP_KEEP="10"
+fi
+export CONFIG_BACKUP_KEEP
+
+# ------------------------------------------------------------------------------
+# Resource profile — keep the add-on well-behaved on low-power Home Assistant
+# hardware (Raspberry Pi, low-RAM VMs).
+#
+# Node sizes its heap against TOTAL HOST memory, which on HAOS is the whole
+# machine. Without a cap the gateway happily grows until the OOM killer takes
+# it (or Home Assistant itself) down. We give it an explicit, logged budget.
+#
+# `auto` (default) only ever touches add-on process settings — it never writes
+# to openclaw.json, so upgrades cannot silently change agent behavior. An
+# explicitly selected `low` additionally applies conservative OpenClaw defaults
+# for keys the user has not set (see apply-resource-profile in the helper).
+# ------------------------------------------------------------------------------
+MEM_TOTAL_MB=$(awk '/^MemTotal:/{printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 0)
+CPU_COUNT=$(nproc 2>/dev/null || echo 1)
+HOST_ARCH=$(uname -m 2>/dev/null || echo unknown)
+
+case "$RESOURCE_PROFILE" in
+  low|balanced|high) ;;
+  auto|"") RESOURCE_PROFILE="auto" ;;
+  *)
+    echo "WARN: Invalid resource_profile '$RESOURCE_PROFILE'; falling back to auto."
+    RESOURCE_PROFILE="auto"
+    ;;
+esac
+
+RESOURCE_PROFILE_SOURCE="option"
+EFFECTIVE_PROFILE="$RESOURCE_PROFILE"
+
+if [ "$RESOURCE_PROFILE" = "auto" ]; then
+  RESOURCE_PROFILE_SOURCE="auto-detected"
+  case "$HOST_ARCH" in
+    armv6*|armv7*)
+      # 32-bit ARM is Pi 3 / Pi Zero class hardware regardless of reported RAM.
+      EFFECTIVE_PROFILE="low"
+      ;;
+    *)
+      if [ "$MEM_TOTAL_MB" -gt 0 ] && [ "$MEM_TOTAL_MB" -lt 2048 ]; then
+        EFFECTIVE_PROFILE="low"
+      elif [ "$MEM_TOTAL_MB" -gt 0 ] && [ "$MEM_TOTAL_MB" -lt 6144 ]; then
+        EFFECTIVE_PROFILE="balanced"
+      elif [ "$MEM_TOTAL_MB" -eq 0 ]; then
+        # Unreadable /proc/meminfo — assume the conservative middle ground.
+        EFFECTIVE_PROFILE="balanced"
+      else
+        EFFECTIVE_PROFILE="high"
+      fi
+      ;;
+  esac
+fi
+
+# Heap budget as a share of total RAM, clamped to a sane band per profile.
+# `high` intentionally sets no cap so large machines keep Node's own default.
+NODE_HEAP_MB=""
+case "$EFFECTIVE_PROFILE" in
+  low)      HEAP_PCT=35; HEAP_MIN=256; HEAP_MAX=768 ;;
+  balanced) HEAP_PCT=45; HEAP_MIN=768; HEAP_MAX=2048 ;;
+  high)     HEAP_PCT=0;  HEAP_MIN=0;   HEAP_MAX=0 ;;
+esac
+
+if [ "$HEAP_PCT" -gt 0 ]; then
+  NODE_HEAP_MB=$(( MEM_TOTAL_MB * HEAP_PCT / 100 ))
+  if [ "$NODE_HEAP_MB" -lt "$HEAP_MIN" ]; then
+    NODE_HEAP_MB="$HEAP_MIN"
+  fi
+  if [ "$NODE_HEAP_MB" -gt "$HEAP_MAX" ]; then
+    NODE_HEAP_MB="$HEAP_MAX"
+  fi
+  if [ -n "${NODE_OPTIONS:-}" ]; then
+    export NODE_OPTIONS="${NODE_OPTIONS} --max-old-space-size=${NODE_HEAP_MB}"
+  else
+    export NODE_OPTIONS="--max-old-space-size=${NODE_HEAP_MB}"
+  fi
+fi
+
+echo "INFO: Resource profile: ${EFFECTIVE_PROFILE} (${RESOURCE_PROFILE_SOURCE}); host: ${MEM_TOTAL_MB} MB RAM, ${CPU_COUNT} CPU, ${HOST_ARCH}"
+if [ -n "$NODE_HEAP_MB" ]; then
+  echo "INFO: Node heap limit for OpenClaw: ${NODE_HEAP_MB} MB (--max-old-space-size)"
+else
+  echo "INFO: Node heap limit: unset (profile 'high' leaves Node's own default in place)"
+fi
+
+if [ "$EFFECTIVE_PROFILE" = "low" ]; then
+  echo "NOTICE: Low-resource profile active. The heaviest optional components are"
+  echo "NOTICE: Chromium (browser automation) and node-llama-cpp (local embeddings)."
+  if [ "$RESOURCE_PROFILE" != "low" ]; then
+    echo "NOTICE: Set resource_profile=low explicitly to also disable browser automation"
+    echo "NOTICE: in OpenClaw, or disable it yourself with: openclaw config set browser.enabled false"
+  fi
+fi
+
+export RESOURCE_PROFILE EFFECTIVE_PROFILE NODE_HEAP_MB
 
 # ------------------------------------------------------------------------------
 # Access mode presets — override individual gateway settings for common scenarios
@@ -500,11 +613,17 @@ GW_PID=""
 GW_RELAY_PID=""
 NGINX_PID=""
 TTYD_PID=""
+HEALTH_PID=""
 SHUTTING_DOWN="false"
 
 shutdown() {
   SHUTTING_DOWN="true"
   echo "Shutdown requested; stopping services..."
+
+  if [ -n "${HEALTH_PID}" ] && kill -0 "${HEALTH_PID}" >/dev/null 2>&1; then
+    kill -TERM "${HEALTH_PID}" >/dev/null 2>&1 || true
+    wait "${HEALTH_PID}" 2>/dev/null || true
+  fi
 
   if [ -n "${NGINX_PID}" ] && kill -0 "${NGINX_PID}" >/dev/null 2>&1; then
     kill -TERM "${NGINX_PID}" >/dev/null 2>&1 || true
@@ -654,6 +773,12 @@ fi
 
 if [ -f "$OPENCLAW_CONFIG_PATH" ]; then
   if [ -f "$HELPER_PATH" ]; then
+    # Snapshot BEFORE the first mutation of this boot so `oc-config restore`
+    # can always undo whatever the repair/apply steps below decide to change.
+    # A failed backup must never block startup — the helper reports and returns 0.
+    python3 "$HELPER_PATH" snapshot "$CONFIG_BACKUP_KEEP" startup || \
+      echo "WARN: Could not snapshot openclaw.json; continuing startup."
+
     if python3 "$HELPER_PATH" repair-known-invalid-settings; then
       :
     else
@@ -672,6 +797,13 @@ if [ -f "$OPENCLAW_CONFIG_PATH" ]; then
       echo "ERROR: Failed to apply gateway settings via oc_config_helper.py (exit code ${rc})."
       echo "ERROR: Gateway configuration may be incorrect; aborting startup."
       exit "${rc}"
+    fi
+
+    # Conservative OpenClaw defaults for explicitly selected low-resource setups.
+    # Only writes keys the user has not set, and never runs for auto-detection.
+    if [ "$RESOURCE_PROFILE" = "low" ]; then
+      python3 "$HELPER_PATH" apply-resource-profile low || \
+        echo "WARN: Could not apply low-profile OpenClaw defaults; continuing."
     fi
   else
     echo "WARN: oc_config_helper.py not found, cannot apply gateway settings"
@@ -1177,6 +1309,7 @@ print(json.load(open(p)).get('gateway',{}).get('auth',{}).get('token',''), end='
     GATEWAY_INTERNAL_PORT="$GATEWAY_INTERNAL_PORT" ACCESS_MODE="$ACCESS_MODE" \
     DISK_TOTAL="$disk_total" DISK_USED="$disk_used" DISK_AVAIL="$disk_avail" DISK_PCT="$disk_pct" \
     NGINX_LOG_LEVEL="$NGINX_LOG_LEVEL" \
+    RESOURCE_PROFILE="$EFFECTIVE_PROFILE" NODE_HEAP_MB="$NODE_HEAP_MB" \
     python3 /render_nginx.py
 
   if [ "$label" != "startup" ]; then
@@ -1225,6 +1358,37 @@ except Exception:
     fi
   done
 ) &
+
+# ------------------------------------------------------------------------------
+# Home Assistant health sensors (optional)
+# Publishes gateway status / version / memory / disk / cert expiry as HA states
+# so users can alert on them. One curl per interval; no resident daemon.
+# ------------------------------------------------------------------------------
+if [ "$HA_HEALTH_SENSORS" = "true" ] || [ "$HA_HEALTH_SENSORS" = "1" ]; then
+  # Gate on the current option value, not the token file: clearing
+  # homeassistant_token leaves the previously written file behind.
+  if [ -z "${SUPERVISOR_TOKEN:-}" ] && [ -z "$HA_TOKEN" ]; then
+    echo "WARN: ha_health_sensors=true but no Home Assistant token is available."
+    echo "WARN: Set 'homeassistant_token' in the add-on Configuration and restart."
+    echo "WARN: Preview the sensors without publishing by running 'oc-health show'."
+  elif command -v oc-health >/dev/null 2>&1; then
+    HA_HEALTH_INTERVAL="$HA_HEALTH_INTERVAL" \
+    ADDON_VERSION="${ADDON_VERSION:-unknown}" \
+    ACCESS_MODE="$ACCESS_MODE" \
+    GATEWAY_BIND_MODE="$GATEWAY_BIND_MODE" \
+    GATEWAY_INTERNAL_PORT="$GATEWAY_INTERNAL_PORT" \
+    RESOURCE_PROFILE="$EFFECTIVE_PROFILE" \
+    NODE_HEAP_MB="$NODE_HEAP_MB" \
+    ENABLE_HTTPS_PROXY="$ENABLE_HTTPS_PROXY" \
+      oc-health loop &
+    HEALTH_PID=$!
+    echo "INFO: Home Assistant health sensors enabled (PID ${HEALTH_PID}, every ${HA_HEALTH_INTERVAL}s)"
+  else
+    echo "WARN: oc-health is missing from the add-on image; skipping health sensors."
+  fi
+else
+  echo "INFO: ha_health_sensors=false; not publishing Home Assistant sensor entities."
+fi
 
 # Keep add-on alive even if gateway/node runtime restarts itself (e.g. during onboarding).
 # If runtime exits unexpectedly, restart it while nginx/ttyd stay up.

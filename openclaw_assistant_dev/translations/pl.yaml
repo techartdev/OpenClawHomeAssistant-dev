@@ -42,6 +42,14 @@ configuration:
   clean_session_locks_on_exit:
     name: Wyczyść blokady sesji przy wyjściu
     description: Usuń pliki blokad sesji gdy dodatek zatrzymuje się poprawnie
+
+  persist_node_global:
+    name: Zachowuj globalne umiejętności npm
+    description: Po włączeniu zapisuje umiejętności npm instalowane przez użytkownika i pakiety globalne w /config/.node_global, aby przetrwały przebudowę dodatku. Domyślnie wyłączone, aby kopie zapasowe Home Assistant były mniejsze.
+
+  persist_brew_tools:
+    name: Zachowuj narzędzia Homebrew
+    description: Po włączeniu zapisuje Homebrew i narzędzia CLI instalowane przez brew w /config/.linuxbrew, aby przetrwały przebudowę dodatku. Domyślnie wyłączone, aby kopie zapasowe Home Assistant były mniejsze.
   
   gateway_remote_url:
     name: URL zdalnego Gateway
@@ -113,3 +121,24 @@ configuration:
   auto_configure_mcp:
     name: Automatyczna konfiguracja MCP dla Home Assistant
     description: "Gdy WŁĄCZONE i token Home Assistant jest ustawiony, automatycznie rejestruje Home Assistant jako serwer MCP przy każdym starcie. Pozwala to OpenClaw kontrolować urządzenia HA, usługi i automatyzacje przez Model Context Protocol. Wyłącz tylko jeśli zarządzasz konfiguracją mcporter ręcznie."
+
+  resource_profile:
+    name: Profil zasobów
+    description: "Utrzymuje dodatek w ryzach na słabym sprzęcie, ograniczając stertę Node.js używaną przez gateway. 'auto' (zalecane) dobiera profil na podstawie architektury CPU i całkowitej pamięci RAM i nigdy nie zmienia Twojej konfiguracji OpenClaw. 'low' dodatkowo wyłącza automatyzację przeglądarki, ale tylko dla ustawień, których sam nie wybrałeś."
+    options:
+      auto: "Automatycznie (wykryj na podstawie sprzętu)"
+      low: "Niski (Raspberry Pi / poniżej 2 GB RAM)"
+      balanced: "Zrównoważony (2-6 GB RAM)"
+      high: "Wysoki (bez limitu sterty)"
+
+  ha_health_sensors:
+    name: Publikuj sensory stanu
+    description: Publikuje stan gateway, wersję OpenClaw, zużycie pamięci przez gateway, zajętość dysku i datę wygaśnięcia certyfikatu TLS jako encje sensor w Home Assistant (sensor.openclaw_*), aby można było na nich budować automatyzacje i powiadomienia. Wymaga ustawionego tokenu Home Assistant.
+
+  ha_health_interval:
+    name: Interwał sensorów stanu
+    description: Jak często (w sekundach) odświeżane są sensory stanu. Zakres 15-3600, domyślnie 60.
+
+  config_backup_keep:
+    name: Liczba przechowywanych kopii konfiguracji
+    description: Ile kopii openclaw.json przechowywać w /config/.openclaw/backups. Kopia powstaje przed pierwszym zapisem konfiguracji przy każdym starcie, dzięki czemu niechciane zmiany można cofnąć poleceniem 'oc-config restore'. Ustaw 0, aby wyłączyć kopie.

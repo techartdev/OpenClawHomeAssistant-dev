@@ -318,6 +318,21 @@ To provide the SSH key: place the private key file in the add-on config director
 | `persist_node_global` | bool | `false` | Persist user-installed npm global skills/packages in `/config/.node_global/`. Turn on only if you want those installs to survive add-on rebuilds. |
 | `persist_brew_tools` | bool | `false` | Persist Homebrew and brew-installed CLI tools in `/config/.linuxbrew/`. Turn on only if you want those installs to survive add-on rebuilds. |
 | `auto_configure_mcp` | bool | `false` | Auto-register Home Assistant as an MCP server on startup (requires `homeassistant_token`) |
+| `config_backup_keep` | int | `10` | How many `openclaw.json` snapshots to keep in `/config/.openclaw/backups`. See [Config snapshots & rollback](#7a-config-snapshots--rollback). `0` disables snapshots. Range: 0-100 |
+
+### Performance
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `resource_profile` | `auto` / `low` / `balanced` / `high` | `auto` | Caps the Node.js heap used by the gateway so it cannot grow until the OOM killer intervenes. See [Resource profiles](#8a-resource-profiles) |
+
+### Home Assistant Integration
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `ha_health_sensors` | bool | `false` | Publish `sensor.openclaw_*` health entities to Home Assistant. Requires `homeassistant_token`. See [Health sensors](#6g-home-assistant-health-sensors) |
+| `ha_health_interval` | int | `60` | Seconds between health sensor updates. Range: 15-3600 |
+
 ---
 
 ## 6. Use Case Guides
@@ -639,6 +654,56 @@ You should see your account listed with the `sheets` service.
 
 > **Persistence**: gog stores credentials under `/config/gogcli/` which is persistent storage — your auth survives add-on updates.
 
+### 6g. Home Assistant Health Sensors
+
+The add-on can publish its own health as Home Assistant entities, so you can alert on problems instead of discovering them in the add-on log.
+
+**Setup**
+
+1. Create a long-lived access token: click your user profile in Home Assistant → **Security** tab → **Create Token**
+2. Paste it into the add-on's `homeassistant_token` option
+3. Set `ha_health_sensors`: **true** (optionally adjust `ha_health_interval`, default 60 s)
+4. Restart the add-on
+
+**Entities published**
+
+| Entity | State | Attributes |
+|---|---|---|
+| `sensor.openclaw_gateway` | `running` / `stopped` | pid, bind_mode, access_mode, port, resource_profile |
+| `sensor.openclaw_version` | OpenClaw runtime version | addon_version |
+| `sensor.openclaw_gateway_memory` | Gateway RSS in MB | heap_limit_mb, resource_profile |
+| `sensor.openclaw_disk_used` | `/config` usage in % | total, used, available |
+| `sensor.openclaw_certificate_expiry` | Days until the TLS cert expires | — (only in `lan_https` mode) |
+
+**Example automation**
+
+```yaml
+automation:
+  - alias: OpenClaw gateway down
+    trigger:
+      - platform: state
+        entity_id: sensor.openclaw_gateway
+        to: "stopped"
+        for: "00:05:00"
+    action:
+      - service: notify.persistent_notification
+        data:
+          message: "OpenClaw gateway has been down for 5 minutes."
+```
+
+**Notes**
+
+- These entities are created through the REST API, so they are **not** backed by an integration. After a Home Assistant restart they reappear at the next update interval (up to `ha_health_interval` seconds).
+- Preview the values without publishing anything — no token required:
+  ```sh
+  oc-health show
+  ```
+- Publish a single round manually:
+  ```sh
+  oc-health once
+  ```
+- Cost is one `curl` per interval; there is no resident process.
+
 ---
 
 ## 7. Data Persistence & Skills
@@ -657,7 +722,32 @@ You should see your account listed with the `sheets` service.
 | Homebrew & brew-installed tools | `/config/.linuxbrew/` | Optional (`persist_brew_tools=true`) |
 | gog OAuth credentials | `/config/gogcli/` | Yes |
 | TLS certificates (lan_https) | `/config/certs/` | Yes (CA persists; server cert regenerated if IP changes) |
+| Config snapshots | `/config/.openclaw/backups/` | Yes |
 | OpenClaw binary | `/usr/lib/node_modules/openclaw/` | **No** — reinstalled from image |
+
+### 7a. Config Snapshots & Rollback
+
+The add-on rewrites `openclaw.json` on **every start** — gateway bind/port/auth from your add-on options, `controlUi.allowedOrigins`, and repair rules for settings that would stop the gateway from booting.
+
+To make that safe, a snapshot of `openclaw.json` is taken **before the first write of each start**, so any unwanted change can be undone.
+
+- **Location**: `/config/.openclaw/backups/openclaw.<UTC timestamp>.<label>.json`
+- **Retention**: the newest `config_backup_keep` snapshots (default 10, `0` disables)
+- **Deduplicated**: if the config has not changed since the last snapshot, no new file is written — restarting the add-on repeatedly will not fill the folder
+
+**Commands** (run in the add-on terminal):
+
+```sh
+oc-config list             # show snapshots, newest first
+oc-config diff             # diff the newest snapshot against the current config
+oc-config diff 3           # diff snapshot #3
+oc-config restore 3        # restore snapshot #3, then restart the add-on
+oc-config snapshot before-experiment   # take a labelled snapshot right now
+```
+
+`oc-config restore` always snapshots the config it is about to replace (label `pre-restore`), so a restore is itself reversible.
+
+> **Important**: Settings that the add-on manages from its own options — `gateway.bind`, `gateway.port`, `gateway.auth.mode`, `gateway.trustedProxies`, `gateway.controlUi.allowedOrigins`, `chatCompletions.enabled` — are re-applied on every start and will overwrite the restored values for those specific keys. Change those in the add-on Configuration, not by restoring a snapshot. Everything else (providers, agents, skills, channels, models) restores as-is.
 
 ### How built-in skills work
 
@@ -704,7 +794,7 @@ The add-on image includes these tools, available in the terminal:
 | curl | `curl` | HTTP client |
 | jq | `jq` | JSON processor |
 | Python 3 | `python3` | Scripting |
-| Node.js 22 | `node` | JavaScript runtime |
+| Node.js 24 | `node` | JavaScript runtime |
 | npm | `npm` | Node package manager |
 | pnpm | `pnpm` | Fast Node package manager |
 | Homebrew | `brew` | Package manager (optional — may not be available on all CPUs) |
@@ -712,6 +802,39 @@ The add-on image includes these tools, available in the terminal:
 | SSH | `ssh` | Remote access |
 | oc-cleanup | `oc-cleanup` | Interactive disk space monitor & cache cleanup helper |
 | oc-gateway | `oc-gateway status` / `oc-gateway restart` | Add-on-native gateway status/restart helper (`run.sh` supervised, no systemd) |
+| oc-config | `oc-config list` / `oc-config restore <n>` | Inspect and roll back `openclaw.json` snapshots |
+| oc-health | `oc-health show` / `oc-health once` | Preview or publish the Home Assistant health sensors |
+
+### 8a. Resource Profiles
+
+Home Assistant runs on everything from a Raspberry Pi 3 to a large NUC, and Node.js sizes its heap against **total host memory**. Left alone, the gateway can grow until the OOM killer takes it — or Home Assistant itself — down.
+
+`resource_profile` gives the gateway an explicit, logged memory budget.
+
+| Profile | Selected when (auto) | Node heap limit |
+|---|---|---|
+| `low` | armv6/armv7, or under 2 GB RAM | 35% of RAM, clamped to 256-768 MB |
+| `balanced` | 2-6 GB RAM | 45% of RAM, clamped to 768-2048 MB |
+| `high` | over 6 GB RAM | none — Node's own default applies |
+
+The resolved profile and heap limit are printed at startup and shown on the add-on landing page:
+
+```
+INFO: Resource profile: low (auto-detected); host: 1024 MB RAM, 4 CPU, armv7l
+INFO: Node heap limit for OpenClaw: 358 MB (--max-old-space-size)
+```
+
+**`auto` never modifies `openclaw.json`.** It only sets add-on process limits, so updating the add-on can never silently change how your agents behave.
+
+Selecting **`low` explicitly** additionally applies conservative OpenClaw defaults — currently `browser.enabled: false`, since Chromium is by far the heaviest optional component. This is only written for keys you have **not** already set yourself, and it is never re-applied: set `browser.enabled: true` in `openclaw.json` and it stays true.
+
+**Other things that matter on small hardware**
+
+- **Chromium** (browser automation) — the largest single consumer. Disable with `openclaw config set browser.enabled false`.
+- **node-llama-cpp** (local memory/embeddings) — CPU- and RAM-heavy on ARM. Consider a remote embeddings provider instead.
+- **`persist_node_global` / `persist_brew_tools`** — leave off unless needed; they add disk and backup weight.
+
+> If the gateway starts hitting the heap ceiling (frequent restarts, `JavaScript heap out of memory` in the log), move up a profile — or reduce the workload. `sensor.openclaw_gateway_memory` (see [Health sensors](#6g-home-assistant-health-sensors)) makes this easy to watch over time.
 
 ### oc-cleanup
 
@@ -994,13 +1117,62 @@ The OpenClaw binary should be installed at `/usr/lib/node_modules/openclaw/`. If
 
 **Symptom**: `ERROR: Failed to apply gateway settings` in logs.
 
-**Fix**: The `openclaw.json` config file may be corrupted. To reset it:
+**Fix**: First try rolling back to the last known-good config instead of starting over:
+
+```sh
+oc-config list
+oc-config diff 1        # see what changed
+oc-config restore 1     # then restart the add-on
+```
+
+If the config is genuinely corrupted beyond repair, reset it:
 
 ```sh
 rm /config/.openclaw/openclaw.json
 ```
 
 Restart the add-on — it will generate a fresh config. You'll need to run `openclaw onboard` again.
+
+### A setting I configured keeps getting changed back
+
+**Symptom**: A value in `openclaw.json` reverts every time the add-on restarts.
+
+**Cause**: Settings the add-on manages from its own options are re-applied on every start — `gateway.bind`, `gateway.port`, `gateway.auth.mode`, `gateway.trustedProxies`, `gateway.controlUi.allowedOrigins` and `chatCompletions.enabled`.
+
+**Fix**: Change those in **Settings → Add-ons → OpenClaw Assistant → Configuration**, not in `openclaw.json`. To see exactly what the add-on changed on the last start:
+
+```sh
+oc-config diff 1
+```
+
+### `JavaScript heap out of memory` / gateway restart loop on a Raspberry Pi
+
+**Symptom**: The gateway restarts repeatedly; the log shows heap allocation failures, or the whole add-on is killed.
+
+**Cause**: The workload exceeds the Node heap budget for the active [resource profile](#8a-resource-profiles), or the device is genuinely out of RAM.
+
+**Fix**:
+1. Check what profile is active — it is printed at startup and shown on the landing page.
+2. If the device has headroom, move `resource_profile` up one step (`low` → `balanced`).
+3. If it does not, reduce the load: `openclaw config set browser.enabled false`, and switch local embeddings to a remote provider.
+4. Watch `sensor.openclaw_gateway_memory` over time (see [Health sensors](#6g-home-assistant-health-sensors)) to see whether you are near the ceiling.
+
+### Health sensors do not appear in Home Assistant
+
+**Symptom**: `ha_health_sensors` is on, but no `sensor.openclaw_*` entities exist.
+
+**Checks**:
+1. Confirm `homeassistant_token` is set — the log says so at startup if it is missing.
+2. Verify the data collection works at all (this needs no token):
+   ```sh
+   oc-health show
+   ```
+3. Try one real publish and read the error:
+   ```sh
+   oc-health once
+   ```
+   `HTTP 401` means the token is invalid or expired — create a new long-lived token in your Home Assistant profile → **Security**.
+4. Remember these entities are created via the REST API, so they disappear on a Home Assistant restart and come back at the next update interval (up to `ha_health_interval` seconds).
 
 ### Disk space running low / "no space left on device"
 
