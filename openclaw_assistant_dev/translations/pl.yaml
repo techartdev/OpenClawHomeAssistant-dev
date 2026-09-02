@@ -139,6 +139,10 @@ configuration:
     name: Interwał sensorów stanu
     description: Jak często (w sekundach) odświeżane są sensory stanu. Zakres 15-3600, domyślnie 60.
 
+  ha_base_url:
+    name: Bazowy adres URL Home Assistant
+    description: Bazowy adres URL instancji Home Assistant dla sensorów stanu. Pozostaw pusty, aby wykryć automatycznie (próbuje https i http na 127.0.0.1, localhost, homeassistant i homeassistant.local, port 8123). Ustaw, jeśli Home Assistant używa innego portu lub hosta, np. https://192.168.1.10:8123
+
   config_backup_keep:
     name: Liczba przechowywanych kopii konfiguracji
     description: Ile kopii openclaw.json przechowywać w /config/.openclaw/backups. Kopia powstaje przed pierwszym zapisem konfiguracji przy każdym starcie, dzięki czemu niechciane zmiany można cofnąć poleceniem 'oc-config restore'. Ustaw 0, aby wyłączyć kopie.

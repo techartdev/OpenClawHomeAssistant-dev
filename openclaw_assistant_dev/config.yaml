@@ -1,5 +1,5 @@
 name: OpenClaw Assistant (DEV)
-version: "0.5.107"
+version: "0.5.108"
 slug: openclaw_assistant_dev
 description: Run OpenClaw Assistant (OpenClaw-compatible) as a Home Assistant add-on.
 url: https://github.com/techartdev/OpenClawHomeAssistant-dev
@@ -179,6 +179,13 @@ options:
   # How often (seconds) to refresh the health sensors. Range 15-3600.
   ha_health_interval: 60
 
+  # Base URL of your Home Assistant instance, used by the health sensors.
+  # Leave empty to auto-detect (tries https/http on 127.0.0.1, localhost,
+  # homeassistant and homeassistant.local, port 8123).
+  # Set this if Home Assistant uses a non-default port or another host,
+  # e.g. "https://192.168.1.10:8123".
+  ha_base_url: ""
+
   # How many openclaw.json snapshots to keep in /config/.openclaw/backups.
   # A snapshot is taken before the add-on's first config write of each start,
   # so a bad change can be rolled back with 'oc-config restore'. 0 disables.
@@ -220,4 +227,5 @@ schema:
   resource_profile: list(auto|low|balanced|high)?
   ha_health_sensors: bool?
   ha_health_interval: int(15,3600)?
+  ha_base_url: str?
   config_backup_keep: int(0,100)?

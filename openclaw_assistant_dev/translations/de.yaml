@@ -139,6 +139,10 @@ configuration:
     name: Intervall der Health-Sensoren
     description: Wie oft (in Sekunden) die Health-Sensoren aktualisiert werden. Bereich 15-3600, Standard 60.
 
+  ha_base_url:
+    name: Home Assistant Basis-URL
+    description: Basis-URL Ihrer Home-Assistant-Instanz für die Health-Sensoren. Leer lassen für automatische Erkennung (probiert https und http auf 127.0.0.1, localhost, homeassistant und homeassistant.local, Port 8123). Setzen Sie sie, wenn Home Assistant einen anderen Port oder Host verwendet, z. B. https://192.168.1.10:8123
+
   config_backup_keep:
     name: Aufzubewahrende Konfigurations-Snapshots
     description: Wie viele openclaw.json-Snapshots in /config/.openclaw/backups aufbewahrt werden. Vor dem ersten Konfigurationsschreibvorgang jedes Starts wird ein Snapshot erstellt, sodass unerwünschte Änderungen mit 'oc-config restore' rückgängig gemacht werden können. 0 deaktiviert Snapshots.

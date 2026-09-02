@@ -33,6 +33,10 @@ ENABLE_HTTPS_PROXY="${ENABLE_HTTPS_PROXY:-false}"
 
 CURL_RC=""
 HA_API=""
+RESOLVE_LOG=""
+RESOLVE_REASON=""
+HA_INSECURE="false"
+LAST_FAIL_CODE=""
 
 cleanup() {
   [ -n "$CURL_RC" ] && rm -f "$CURL_RC"
@@ -51,45 +55,101 @@ supervisor_api_reachable() {
   getent hosts supervisor >/dev/null 2>&1
 }
 
-resolve_api() {
-  local token="" user_token=""
-
-  if [ -r "$HA_TOKEN_FILE" ]; then
-    user_token="$(cat "$HA_TOKEN_FILE" 2>/dev/null || true)"
-  fi
-
-  # Prefer the user's long-lived token against the host's Home Assistant.
-  # localhost:8123 is reachable under host networking; the Supervisor proxy is
-  # only used when it actually resolves.
-  if [ -n "$user_token" ]; then
-    token="$user_token"
-    HA_API="${HA_BASE_URL:-http://localhost:8123}/api"
-  elif [ -n "${SUPERVISOR_TOKEN:-}" ] && supervisor_api_reachable; then
-    token="$SUPERVISOR_TOKEN"
-    HA_API="http://supervisor/core/api"
-  fi
-
-  if [ -z "$token" ]; then
-    return 1
-  fi
-
-  # Reject anything that could break out of the curl config quoting.
+# Write the bearer token to a 0600 curl config so it never appears in `ps`/argv.
+# `insecure` is added for local Home Assistant endpoints: HA commonly serves
+# HTTPS with a certificate issued for its external hostname, which never matches
+# 127.0.0.1 or homeassistant.local. The connection stays on the local host/LAN.
+write_curl_rc() {
+  local token="$1" insecure="${2:-false}" previous_umask
   case "$token" in
     *\"*|*$'\n'*|*$'\r'*)
       echo "ERROR: Home Assistant token contains invalid characters; refusing to use it." >&2
       return 1
       ;;
   esac
-
-  # Pass the token via a 0600 config file so it never appears in `ps` / argv.
-  local previous_umask
   previous_umask="$(umask)"
   umask 077
-  CURL_RC="$(mktemp /tmp/.oc-health-XXXXXX)" || { umask "$previous_umask"; return 1; }
+  if [ -z "$CURL_RC" ]; then
+    CURL_RC="$(mktemp /tmp/.oc-health-XXXXXX)" || { umask "$previous_umask"; return 1; }
+  fi
   printf 'header = "Authorization: Bearer %s"\nheader = "Content-Type: application/json"\n' \
     "$token" > "$CURL_RC"
+  if [ "$insecure" = "true" ]; then
+    printf 'insecure\n' >> "$CURL_RC"
+  fi
   umask "$previous_umask"
   return 0
+}
+
+probe_api_base() {
+  curl -sS -m 5 -o /dev/null -w '%{http_code}' -K "$CURL_RC" "$1/" 2>/dev/null
+}
+
+# Home Assistant is not always plain HTTP on localhost:8123 — it may serve HTTPS
+# (curl reports "Empty reply from server" when we speak HTTP to a TLS port), sit
+# on another host, or simply not be listening yet while the add-on boots. Probe
+# the plausible endpoints and use the first that answers.
+resolve_api() {
+  local user_token="" candidates=() cand url tok insecure code
+
+  if [ -r "$HA_TOKEN_FILE" ]; then
+    user_token="$(cat "$HA_TOKEN_FILE" 2>/dev/null || true)"
+  fi
+
+  if [ -n "$user_token" ]; then
+    if [ -n "${HA_BASE_URL:-}" ]; then
+      candidates+=("${HA_BASE_URL%/}/api|$user_token|true")
+    fi
+    for host in 127.0.0.1 localhost homeassistant homeassistant.local; do
+      candidates+=("https://${host}:8123/api|$user_token|true")
+      candidates+=("http://${host}:8123/api|$user_token|false")
+    done
+  fi
+  if [ -n "${SUPERVISOR_TOKEN:-}" ] && supervisor_api_reachable; then
+    candidates+=("http://supervisor/core/api|$SUPERVISOR_TOKEN|false")
+  fi
+
+  if [ ${#candidates[@]} -eq 0 ]; then
+    RESOLVE_REASON="no-token"
+    return 1
+  fi
+
+  RESOLVE_LOG=""
+  for cand in "${candidates[@]}"; do
+    url="${cand%%|*}"
+    tok="${cand#*|}"; tok="${tok%%|*}"
+    insecure="${cand##*|}"
+    write_curl_rc "$tok" "$insecure" || continue
+    code="$(probe_api_base "$url")"
+    RESOLVE_LOG="${RESOLVE_LOG}    ${url} -> HTTP ${code:-000}
+"
+    case "${code:-000}" in
+      200|401|403)
+        # 401/403 means we found Home Assistant but the token is wrong; stop
+        # here so the reported error is accurate instead of "unreachable".
+        HA_API="$url"
+        HA_INSECURE="$insecure"
+        write_curl_rc "$tok" "$insecure"
+        return 0
+        ;;
+    esac
+  done
+
+  RESOLVE_REASON="unreachable"
+  return 1
+}
+
+report_resolve_failure() {
+  if [ "${RESOLVE_REASON:-}" = "no-token" ]; then
+    echo "INFO: oc-health needs a Home Assistant token."
+    echo "INFO: Set 'homeassistant_token' in the add-on Configuration and restart."
+    echo "INFO: Run 'oc-health show' to preview the states without publishing."
+    return
+  fi
+  echo "WARN: Could not reach the Home Assistant API. Tried:" >&2
+  printf '%s' "${RESOLVE_LOG:-}" >&2
+  echo "WARN: If Home Assistant is not on the default port, set 'ha_base_url' in the" >&2
+  echo "WARN: add-on Configuration (for example http://192.168.1.10:8123)." >&2
 }
 
 # ── Metric collection ────────────────────────────────────────
@@ -254,28 +314,26 @@ case "$MODE" in
     ;;
   check)
     echo "OpenClaw health sensor diagnostics"
-    echo "  token file : ${HA_TOKEN_FILE} ($( [ -s "$HA_TOKEN_FILE" ] && echo present || echo missing ))"
+    echo "  token file      : ${HA_TOKEN_FILE} ($( [ -s "$HA_TOKEN_FILE" ] && echo present || echo missing ))"
     echo "  SUPERVISOR_TOKEN: $( [ -n "${SUPERVISOR_TOKEN:-}" ] && echo present || echo absent )"
     echo "  supervisor host : $( supervisor_api_reachable && echo resolves || echo "does not resolve (expected with host_network)" )"
-    if ! resolve_api; then
-      echo "  endpoint   : none — set 'homeassistant_token' in the add-on Configuration"
-      exit 1
+    echo "  ha_base_url     : ${HA_BASE_URL:-<unset>}"
+    echo "  endpoints tried :"
+    if resolve_api; then
+      printf '%s' "${RESOLVE_LOG:-}"
+      echo "  chosen          : ${HA_API}"
+      probe=$(probe_api_base "$HA_API")
+      case "${probe:-000}" in
+        200) echo "  result          : OK - Home Assistant is reachable and the token works"; exit 0 ;;
+        *) explain_failure "${probe:-000}"; exit 1 ;;
+      esac
     fi
-    echo "  endpoint   : ${HA_API}"
-    probe=$(curl -sS -m 10 -o /dev/null -w '%{http_code}' -K "$CURL_RC" "${HA_API}/" 2>/dev/null)
-    echo "  probe GET ${HA_API}/ -> HTTP ${probe:-000}"
-    case "${probe:-000}" in
-      200) echo "  result     : OK — Home Assistant is reachable and the token works"; exit 0 ;;
-      *) explain_failure "${probe:-000}"; exit 1 ;;
-    esac
+    printf '%s' "${RESOLVE_LOG:-}"
+    report_resolve_failure
+    exit 1
     ;;
   once|loop)
-    if ! resolve_api; then
-      echo "INFO: oc-health needs a Home Assistant token."
-      echo "INFO: Set 'homeassistant_token' in the add-on Configuration and restart."
-      echo "INFO: Run 'oc-health show' to preview the states without publishing."
-      exit 1
-    fi
+    :
     ;;
   help|-h|--help)
     cat <<'EOF'
@@ -303,6 +361,10 @@ EOF
 esac
 
 if [ "$MODE" = "once" ]; then
+  if ! resolve_api; then
+    report_resolve_failure
+    exit 1
+  fi
   if publish_round; then
     echo "INFO: Published OpenClaw health sensors to ${HA_API}"
     exit 0
@@ -317,9 +379,23 @@ if ! [[ "$INTERVAL" =~ ^[0-9]+$ ]] || [ "$INTERVAL" -lt 15 ]; then
   INTERVAL=60
 fi
 
-echo "INFO: Publishing OpenClaw health sensors to ${HA_API} every ${INTERVAL}s"
 LAST_ROUND_OK="unknown"
 while true; do
+  if [ -z "$HA_API" ]; then
+    if resolve_api; then
+      echo "INFO: Publishing OpenClaw health sensors to ${HA_API} every ${INTERVAL}s"
+      LAST_ROUND_OK="unknown"
+    else
+      if [ "$LAST_ROUND_OK" != "no" ]; then
+        report_resolve_failure
+        echo "WARN: Retrying every ${INTERVAL}s; logged once per status change." >&2
+        LAST_ROUND_OK="no"
+      fi
+      sleep "$INTERVAL"
+      continue
+    fi
+  fi
+
   if publish_round; then
     if [ "$LAST_ROUND_OK" != "yes" ]; then
       echo "INFO: Home Assistant health sensors are updating."
@@ -329,6 +405,10 @@ while true; do
     explain_failure "$LAST_FAIL_CODE"
     echo "WARN: Still retrying every ${INTERVAL}s; logged once per status change." >&2
     LAST_ROUND_OK="no"
+    # Re-resolve on the next tick in case Home Assistant moved or came up late.
+    if [ "$LAST_FAIL_CODE" = "000" ]; then
+      HA_API=""
+    fi
   fi
   sleep "$INTERVAL"
 done

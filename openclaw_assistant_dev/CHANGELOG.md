@@ -2,6 +2,15 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.108] - 2026-09-02
+
+### Added
+- New `ha_base_url` option to point the health sensors at a Home Assistant on a non-default port or host (empty = auto-detect).
+
+### Fixed
+- **Health sensors could not reach a Home Assistant that serves HTTPS**: endpoint detection only ever tried plain `http://`, which a TLS listener answers by closing the connection — surfacing as `HTTP 000` (curl: *Empty reply from server*). Detection now probes `https` and `http` across `127.0.0.1`, `localhost`, `homeassistant` and `homeassistant.local`, and uses the first endpoint that answers. TLS verification is skipped for these local endpoints because Home Assistant's certificate is normally issued for its external hostname and never matches a loopback address; the connection stays on the local host/LAN.
+- Detection is retried on later cycles instead of only at startup, so sensors still come up when the add-on starts before Home Assistant is listening.
+
 ## [0.5.107] - 2026-09-02
 
 ### Fixed

@@ -332,6 +332,7 @@ To provide the SSH key: place the private key file in the add-on config director
 |---|---|---|---|
 | `ha_health_sensors` | bool | `false` | Publish `sensor.openclaw_*` health entities to Home Assistant. Requires `homeassistant_token`. See [Health sensors](#6g-home-assistant-health-sensors) |
 | `ha_health_interval` | int | `60` | Seconds between health sensor updates. Range: 15-3600 |
+| `ha_base_url` | string | _(empty)_ | Base URL of Home Assistant for the health sensors. Empty auto-detects (tries `https` and `http` on `127.0.0.1`, `localhost`, `homeassistant`, `homeassistant.local`, port 8123). Set it if Home Assistant uses a non-default port or host, e.g. `https://192.168.1.10:8123` |
 
 ---
 
@@ -1233,6 +1234,7 @@ ls /config/.openclaw/logs/stability/   # per-failure diagnostic bundles
 **Symptom**: `ha_health_sensors` is on, but no `sensor.openclaw_*` entities exist.
 
 **Checks**:
+0. If your Home Assistant serves **HTTPS**, plain-HTTP probes fail with `HTTP 000` (curl reports *Empty reply from server*). Auto-detection tries `https` first from v0.5.108; if Home Assistant is on a non-default port or host, set `ha_base_url` explicitly.
 1. Confirm `homeassistant_token` is set — the log says so at startup if it is missing.
 2. Verify the data collection works at all (this needs no token):
    ```sh

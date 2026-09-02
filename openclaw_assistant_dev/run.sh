@@ -72,6 +72,7 @@ AUTO_CONFIGURE_MCP=$(read_json_bool auto_configure_mcp false)
 RESOURCE_PROFILE=$(jq -r '.resource_profile // "auto"' "$OPTIONS_FILE")
 HA_HEALTH_SENSORS=$(read_json_bool ha_health_sensors false)
 HA_HEALTH_INTERVAL_RAW=$(jq -r '.ha_health_interval // 60' "$OPTIONS_FILE")
+HA_BASE_URL=$(jq -r '.ha_base_url // empty' "$OPTIONS_FILE")
 CONFIG_BACKUP_KEEP_RAW=$(jq -r '.config_backup_keep // 10' "$OPTIONS_FILE")
 GW_ENV_VARS_TYPE=$(jq -r 'if .gateway_env_vars == null then "null" else (.gateway_env_vars | type) end' "$OPTIONS_FILE")
 GW_ENV_VARS_RAW=$(jq -r '.gateway_env_vars // empty' "$OPTIONS_FILE")
@@ -1051,7 +1052,9 @@ if [ "$AUTO_CONFIGURE_MCP" = "true" ] && [ -n "$HA_TOKEN" ]; then
     # hostname normally does not resolve — registering that URL would silently
     # produce a dead MCP server. Prefer the host's Home Assistant on localhost
     # and only use the Supervisor proxy when it actually resolves.
-    if [ -n "${SUPERVISOR_TOKEN:-}" ] && getent hosts supervisor >/dev/null 2>&1; then
+    if [ -n "$HA_BASE_URL" ]; then
+      MCP_HA_URL="${HA_BASE_URL%/}/api/mcp"
+    elif [ -n "${SUPERVISOR_TOKEN:-}" ] && getent hosts supervisor >/dev/null 2>&1; then
       MCP_HA_URL="http://supervisor/core/api/mcp"
     else
       MCP_HA_URL="http://localhost:8123/api/mcp"
@@ -1398,6 +1401,7 @@ if [ "$HA_HEALTH_SENSORS" = "true" ] || [ "$HA_HEALTH_SENSORS" = "1" ]; then
     echo "WARN: Preview the sensors without publishing by running 'oc-health show'."
   elif command -v oc-health >/dev/null 2>&1; then
     HA_HEALTH_INTERVAL="$HA_HEALTH_INTERVAL" \
+    HA_BASE_URL="$HA_BASE_URL" \
     ADDON_VERSION="${ADDON_VERSION:-unknown}" \
     ACCESS_MODE="$ACCESS_MODE" \
     GATEWAY_BIND_MODE="$GATEWAY_BIND_MODE" \
