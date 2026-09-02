@@ -206,7 +206,20 @@ case "$ACCESS_MODE" in
     GATEWAY_AUTH_MODE="token"
     ENABLE_HTTPS_PROXY=true
     GATEWAY_INTERNAL_PORT=$((GATEWAY_PORT + 1))
+    # OpenClaw 2026.8.2+ refuses requests that carry forwarded identity headers
+    # from a source it does not trust ("proxy_attribution_required"). The
+    # built-in HTTPS proxy is our own nginx on loopback and it sets
+    # X-Forwarded-For / X-Real-IP / X-Forwarded-Proto, so loopback must be a
+    # trusted proxy or every gateway request is rejected. Trusting loopback also
+    # lets the gateway attribute the real LAN client IP for rate limiting
+    # instead of seeing every request as 127.0.0.1.
+    if [ -n "$GATEWAY_TRUSTED_PROXIES" ]; then
+      GATEWAY_TRUSTED_PROXIES="127.0.0.1,::1,${GATEWAY_TRUSTED_PROXIES}"
+    else
+      GATEWAY_TRUSTED_PROXIES="127.0.0.1,::1"
+    fi
     echo "INFO: Access mode: lan_https (built-in HTTPS proxy on 0.0.0.0:${GATEWAY_PORT})"
+    echo "INFO: Trusting loopback as a proxy so the gateway can attribute LAN clients."
     ;;
   lan_reverse_proxy)
     GATEWAY_BIND_MODE="lan"

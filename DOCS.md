@@ -1166,6 +1166,28 @@ Restart the add-on — it will generate a fresh config. You'll need to run `open
 oc-config diff 1
 ```
 
+### `proxy_attribution_required` / "Proxy client attribution is required"
+
+**Symptom**: the gateway is running, but every request returns:
+
+```json
+{"error":{"message":"Proxy client attribution is required. Configure gateway.trustedProxies narrowly and make the proxy overwrite or safely rebuild forwarded client headers.","type":"proxy_attribution_required"}}
+```
+
+**Cause**: OpenClaw `2026.8.2+` rejects requests that carry forwarded identity headers (`X-Forwarded-For`, `X-Real-IP`, `Forwarded`) from a source that is not listed in `gateway.trustedProxies`. It fails closed rather than trusting a client-supplied IP.
+
+**In `lan_https` mode** this is fixed automatically from v0.5.106: the add-on's own HTTPS proxy runs on loopback and sets those headers, so `127.0.0.1` and `::1` are added to `gateway.trustedProxies` for you. Update the add-on and restart.
+
+**In `lan_reverse_proxy` mode** (or `custom` with your own proxy), set `gateway_trusted_proxies` to the address your proxy connects *from* — not the address clients use:
+
+```
+gateway_trusted_proxies: "172.30.0.0/16"
+```
+
+Your proxy must also send a trustworthy `X-Forwarded-For`. In Nginx Proxy Manager this is the default; in a hand-written nginx config use `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`.
+
+> **Note**: the resolved client IP must not itself be loopback. Browsing from the Home Assistant host over `127.0.0.1` through the proxy therefore still fails attribution — use the machine's LAN address instead.
+
 ### Gateway restart loop after an OpenClaw upgrade (`requires migration`)
 
 **Symptom**: after an add-on update the gateway never comes up, and the log repeats:

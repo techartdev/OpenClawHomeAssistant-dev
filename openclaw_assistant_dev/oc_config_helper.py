@@ -401,7 +401,13 @@ def apply_gateway_settings(mode: str, remote_url: str, bind_mode: str, port: int
     auth = gateway["auth"]
     chat_completions = gateway["http"]["endpoints"]["chatCompletions"]
 
-    trusted_proxies = [p.strip() for p in trusted_proxies_csv.split(",") if p.strip()]
+    # Order-preserving dedupe: access-mode presets prepend loopback, which can
+    # repeat an entry the user also configured.
+    trusted_proxies = []
+    for candidate in trusted_proxies_csv.split(","):
+        candidate = candidate.strip()
+        if candidate and candidate not in trusted_proxies:
+            trusted_proxies.append(candidate)
 
     # OpenClaw trusted-proxy mode requires nested auth.trustedProxy config.
     # Use a sane default user header expected from reverse proxies.

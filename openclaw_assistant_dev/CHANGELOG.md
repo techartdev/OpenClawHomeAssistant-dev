@@ -2,6 +2,11 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.106] - 2026-09-02
+
+### Fixed
+- **`proxy_attribution_required` in `lan_https` mode**: OpenClaw `2026.8.2` began rejecting requests that carry forwarded identity headers from an untrusted source. The add-on's built-in HTTPS proxy runs on loopback and sets `X-Forwarded-For` / `X-Real-IP` / `X-Forwarded-Proto`, but loopback was never added to `gateway.trustedProxies`, so the gateway refused every request with `proxy_attribution_required`. `lan_https` now trusts `127.0.0.1` and `::1` (merged with any `gateway_trusted_proxies` you set, and deduplicated). As a side benefit the gateway can now attribute the real LAN client IP for rate limiting instead of seeing every request as loopback.
+
 ## [0.5.105] - 2026-09-02
 
 ### Fixed
