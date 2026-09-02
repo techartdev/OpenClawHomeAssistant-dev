@@ -2,6 +2,17 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.107] - 2026-09-02
+
+### Fixed
+- **Health sensors could not reach Home Assistant (`HTTP 000`)**: `oc-health` preferred the Supervisor proxy whenever `SUPERVISOR_TOKEN` was present, but this add-on runs with `host_network: true`, so the container is not on the Supervisor bridge network and the `supervisor` hostname does not resolve. Every sensor update failed at the connection level. It now prefers the user's long-lived token against the host's Home Assistant on `localhost:8123`, and only uses the Supervisor proxy when that hostname actually resolves.
+- The same endpoint-selection bug in the MCP auto-configuration would have registered an unreachable `http://supervisor/core/api/mcp` URL; it now applies the same reachability check.
+- Health sensor failures are logged once per status change instead of one line per entity per interval, so an outage can no longer fill the add-on log (previously ~7000 lines a day).
+- Failures now explain themselves: `HTTP 000` reports that Home Assistant is unreachable at the resolved endpoint, `401`/`403` points at the token, rather than printing a bare status code.
+
+### Added
+- `oc-health check`: diagnoses credentials and API connectivity in one command — which endpoint was chosen, whether a token is present, whether the Supervisor host resolves, and the result of a live probe.
+
 ## [0.5.106] - 2026-09-02
 
 ### Fixed

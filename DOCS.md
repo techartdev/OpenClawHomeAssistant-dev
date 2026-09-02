@@ -803,7 +803,7 @@ The add-on image includes these tools, available in the terminal:
 | oc-cleanup | `oc-cleanup` | Interactive disk space monitor & cache cleanup helper |
 | oc-gateway | `oc-gateway status` / `oc-gateway restart` | Add-on-native gateway status/restart helper (`run.sh` supervised, no systemd) |
 | oc-config | `oc-config list` / `oc-config restore <n>` | Inspect and roll back `openclaw.json` snapshots |
-| oc-health | `oc-health show` / `oc-health once` | Preview or publish the Home Assistant health sensors |
+| oc-health | `oc-health check` / `oc-health show` / `oc-health once` | Diagnose, preview or publish the Home Assistant health sensors |
 
 ### 8a. Resource Profiles
 
@@ -1238,12 +1238,17 @@ ls /config/.openclaw/logs/stability/   # per-failure diagnostic bundles
    ```sh
    oc-health show
    ```
-3. Try one real publish and read the error:
+3. Diagnose credentials and connectivity in one step:
+   ```sh
+   oc-health check
+   ```
+   It reports which endpoint was chosen, whether the token is present, and the result of a live probe.
+4. Try one real publish and read the error:
    ```sh
    oc-health once
    ```
-   `HTTP 401` means the token is invalid or expired — create a new long-lived token in your Home Assistant profile → **Security**.
-4. Remember these entities are created via the REST API, so they disappear on a Home Assistant restart and come back at the next update interval (up to `ha_health_interval` seconds).
+   `HTTP 401` means the token is invalid or expired — create a new long-lived token in your Home Assistant profile → **Security**. `HTTP 000` means Home Assistant could not be reached at all.
+5. Remember these entities are created via the REST API, so they disappear on a Home Assistant restart and come back at the next update interval (up to `ha_health_interval` seconds).
 
 ### Disk space running low / "no space left on device"
 

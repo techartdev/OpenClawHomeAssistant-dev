@@ -1046,9 +1046,12 @@ fi
 # ------------------------------------------------------------------------------
 if [ "$AUTO_CONFIGURE_MCP" = "true" ] && [ -n "$HA_TOKEN" ]; then
   if command -v mcporter >/dev/null 2>&1; then
-    # Detect HA API URL: prefer supervisor proxy (works in all add-on network modes),
-    # fall back to localhost:8123 (works with host_network: true).
-    if [ -n "${SUPERVISOR_TOKEN:-}" ]; then
+    # Detect HA API URL. This add-on runs with host_network: true, so the
+    # container is not on the Supervisor bridge network and the `supervisor`
+    # hostname normally does not resolve — registering that URL would silently
+    # produce a dead MCP server. Prefer the host's Home Assistant on localhost
+    # and only use the Supervisor proxy when it actually resolves.
+    if [ -n "${SUPERVISOR_TOKEN:-}" ] && getent hosts supervisor >/dev/null 2>&1; then
       MCP_HA_URL="http://supervisor/core/api/mcp"
     else
       MCP_HA_URL="http://localhost:8123/api/mcp"
