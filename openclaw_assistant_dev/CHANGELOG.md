@@ -2,6 +2,14 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.109] - 2026-09-02
+
+### Changed
+- **Documentation reviewed against OpenClaw `2026.8.2`.** Added a *Device pairing (first connection)* walkthrough — the gateway host is the add-on container, so `openclaw devices list` / `openclaw devices approve <requestId>` in the add-on terminal is all that is needed, and the `ssh -N -L` hint printed by `openclaw dashboard` does not apply here. Corrected the long-standing claim that the Control UI requires HTTPS or localhost: upstream removed that restriction (device identity is signed with pure-JS Ed25519 on any origin), so the guidance now recommends HTTPS for token confidentiality rather than presenting it as mandatory. Rewrote the two error-1008 troubleshooting entries around pairing, and marked `controlui_disable_device_auth` as deprecated and inert in all six locales.
+
+### Fixed
+- **Stopped writing a retired OpenClaw key.** The add-on set `gateway.controlUi.dangerouslyDisableDeviceAuth` on every start to skip Control UI device pairing. OpenClaw retired that flag in the `2026.8.x` line: it is inert, the security audit reports it as a dangerous key, and `openclaw doctor --fix` deletes it — so the add-on was re-adding it every boot and fighting Doctor. The add-on now removes the key instead, which also clears the "dangerous config flags enabled" startup warning. Browsers pair once via `openclaw devices approve <requestId>`.
+
 ## [0.5.108] - 2026-09-02
 
 ### Added

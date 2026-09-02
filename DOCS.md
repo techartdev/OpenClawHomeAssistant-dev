@@ -33,7 +33,7 @@ The add-on container runs three services:
 | **ttyd** (Web terminal) | 7681 (configurable) | Provides a browser-based terminal for setup and management |
 
 When you open the add-on page in Home Assistant, nginx serves a landing page with:
-- An **Open Gateway Web UI** button (opens in a new tab to avoid WebSocket issues with Ingress)
+- An **Open Gateway Web UI** button (opens in a new tab — see [why](#4-accessing-the-gateway-web-ui))
 - An embedded **terminal** for running commands
 
 ### Key directories
@@ -123,11 +123,13 @@ Save this token — you'll need it to access the Gateway Web UI and for API inte
 
 ## 4. Accessing the Gateway Web UI
 
-The Gateway Web UI (Control UI) is OpenClaw's main web interface. It opens in a **separate browser tab** because Home Assistant's Ingress proxy has WebSocket limitations.
+The Gateway Web UI (Control UI) is OpenClaw's main web interface. It opens in a **separate browser tab**, not inside the add-on page.
 
-> **Important (v2026.2.21+):** OpenClaw now requires a **secure context** (HTTPS or localhost) for the Control UI. Plain HTTP over LAN is no longer accepted. The add-on's `access_mode` option makes this easy — see below.
+The reason is asset paths, not WebSockets — Ingress proxies WebSockets fine, which is how the embedded terminal works. Home Assistant serves add-on pages under a per-add-on prefix (`/api/hassio_ingress/<token>/`), while the Control UI emits its assets from the origin root unless `gateway.controlUi.basePath` matches that prefix exactly. Serving it under Ingress would therefore require pinning the gateway to that prefix, which would break direct LAN access at the same time.
+
+> **Updated for OpenClaw 2026.8.2:** the Control UI **no longer requires a secure context**. Device identity is generated and signed with pure-JS Ed25519, so pairing works on any origin, including plain HTTP. HTTPS is still strongly recommended — over plaintext, both the page and your gateway token are readable by anyone on the path — but it is no longer a hard requirement.
 >
-> **v2026.2.22 note:** The gateway now emits a startup security warning when `dangerouslyDisableDeviceAuth` is active (used by `lan_https` mode). This warning is **expected and safe to ignore** — token authentication is still enforced.
+> **Every browser must be paired once** before it can use the Control UI. See [Device pairing](#device-pairing-first-connection) below. `gateway.controlUi.dangerouslyDisableDeviceAuth` used to bypass this; upstream has **retired that flag and it is now inert**, so pairing applies to all browsers.
 
 ### Choosing an access mode
 
@@ -196,7 +198,7 @@ Forward the gateway port from your HA host to your local machine:
 ssh -L 18789:127.0.0.1:18789 your-user@your-ha-ip
 ```
 
-Then open `http://localhost:18789` in your browser. `localhost` counts as a secure context.
+Then open `http://localhost:18789` in your browser.
 
 > **Limitation**: SSH forwarding doesn't work on phones/tablets. Use `lan_https` for mobile access.
 
@@ -228,17 +230,41 @@ Set `gateway_public_url` in the add-on configuration to the URL where the gatewa
 
 > **Tip**: In `lan_https` mode, if you leave `gateway_public_url` empty, the add-on auto-constructs it from the detected LAN IP.
 
-### Browser security: "requires HTTPS or localhost"
+### Device pairing (first connection)
 
-If you see:
+The first time a browser opens the Gateway Web UI it shows **Device pairing required** with a request ID. This is normal and happens once per browser.
 
-> control ui requires HTTPS or localhost (secure context)
-> disconnected (1008): control ui requires device identity
+The "Gateway host" the message refers to is **the add-on container itself**, and the add-on's web terminal is a root shell on it — no SSH required.
 
-This means the browser is connecting over plain HTTP. **Solutions**:
-- Set `access_mode` to **lan_https** (easiest — no external setup)
-- Set `access_mode` to **lan_reverse_proxy** and use an HTTPS reverse proxy
-- Use SSH port forwarding to `localhost` (desktop only)
+1. Open the add-on page in Home Assistant and use the embedded terminal (or **Open Terminal (full page)**).
+2. List the pending request:
+   ```sh
+   openclaw devices list
+   ```
+   ```
+   Pending (1)
+   Request                               Device                    Requested            Age
+   5dd686b0-2a01-4f3e-b532-873914bfe829  1a6ad91d... 192.168.1.106 roles: operator; ... 2m ago
+   ```
+3. Approve it, using the ID shown in the browser (or in the table above):
+   ```sh
+   openclaw devices approve 5dd686b0-2a01-4f3e-b532-873914bfe829
+   ```
+4. Click **Connect** again in the browser.
+
+**Useful variations**
+
+```sh
+openclaw devices approve --latest   # preview the newest request (exits 1), then rerun with the exact ID
+openclaw devices list --json        # machine-readable
+openclaw devices rename --device <id> --name "Living room tablet"
+openclaw devices reject <requestId> # deny a request you do not recognise
+openclaw devices remove <deviceId>  # un-pair a device later
+```
+
+> **Ignore the `ssh -N -L ...` hint.** Running `openclaw dashboard` in the add-on prints "No GUI detected" and suggests an SSH tunnel — that guidance is for headless servers. In this add-on you already have a shell on the gateway host, so `openclaw devices list` / `approve` is all you need.
+
+> **Security note:** approve only requests you just triggered yourself. The table shows the requesting IP — check it matches the device you are pairing.
 
 ### Unauthorized error
 
@@ -248,7 +274,7 @@ If the Gateway UI shows **Unauthorized**, re-check your token:
 jq -r '.gateway.auth.token' /config/.openclaw/openclaw.json
 ```
 
-> **Note**: Since OpenClaw v2026.2.22+ `openclaw config get` redacts sensitive values — use `jq` to read directly from the config file.
+> **Note**: `openclaw config get` redacts sensitive values (v2026.2.22+) — read the token from the config file with `jq`.
 
 ---
 
@@ -276,7 +302,7 @@ All options are set via **Settings → Apps/Add-ons → OpenClaw Assistant → C
 | `gateway_auth_mode` | `token` / `trusted-proxy` | `token` | Gateway auth mode. Use `trusted-proxy` when terminating HTTPS in a reverse proxy and forwarding trusted auth headers. |
 | `gateway_trusted_proxies` | string | _(empty)_ | Comma-separated trusted proxy IP/CIDR list used with `gateway_auth_mode: trusted-proxy`. |
 | `gateway_additional_allowed_origins` | string | _(empty)_ | Comma-separated additional origins merged into `gateway.controlUi.allowedOrigins` in `lan_https` mode (example: `https://ha.example.com:8443,capacitor://localhost`). |
-| `controlui_disable_device_auth` | bool | `true` | Controls `gateway.controlUi.dangerouslyDisableDeviceAuth` in `lan_https` mode. **ON (recommended):** skip per-device pairing approval, avoid error 1008 on LAN HTTPS, token auth still required. **OFF:** enforce per-device pairing prompts (stricter, but more friction). |
+| `controlui_disable_device_auth` | bool | `true` | **Deprecated / no effect.** It set `gateway.controlUi.dangerouslyDisableDeviceAuth`, which OpenClaw retired in the `2026.8.x` line — the key is now inert and `openclaw doctor --fix` removes it. Every browser pairs once instead; see [Device pairing](#device-pairing-first-connection). The option is kept so existing configurations keep validating, and the add-on no longer writes the key. |
 | `force_ipv4_dns` | bool | `true` | Force IPv4-first DNS ordering for Node network calls. **Recommended ON** — most HAOS VMs lack IPv6 egress, causing `web_fetch` and Telegram timeouts. Set to `false` only if your network has working IPv6. |
 | `gateway_env_vars` | list of `{name, value}` | `[]` | Environment variables exported to the gateway process at startup. UI format: list entries with `name` and `value` (example: `name=OPENAI_API_KEY`, `value=sk-...`). Limits: max 50 vars, key length 255, value length 10000. Reserved runtime keys are blocked (for example `PATH`, `HOME`, `NODE_OPTIONS`, `NODE_PATH`, `OPENCLAW_*`, proxy vars). Legacy string/object formats are still accepted for backward compatibility. |
 | `nginx_log_level` | `full` / `minimal` | `minimal` | Nginx access log verbosity. `minimal` suppresses repetitive Home Assistant health-check and polling requests (`GET /`, `GET /v1/models`). `full` logs everything. |
@@ -342,7 +368,7 @@ To provide the SSH key: place the private key file in the add-on config director
 
 This is the most common setup — accessing the Gateway Web UI from a browser on your local network (including phones and tablets).
 
-> **Since OpenClaw v2026.2.21**, the Control UI requires a secure context (HTTPS or localhost). Use the `access_mode` option for easy setup.
+> HTTPS is not strictly required by OpenClaw any more, but it is strongly recommended on a LAN: over plain HTTP your gateway token travels in the clear. The `access_mode` option sets it up for you.
 
 #### Option 1 — Built-in HTTPS proxy (recommended)
 
@@ -989,16 +1015,20 @@ Go to **Settings → Add-ons → OpenClaw Assistant → Log** tab. Logs show sta
 jq 'del(.tools.web.search.provider)' /config/.openclaw/openclaw.json > /tmp/openclaw.json && mv /tmp/openclaw.json /config/.openclaw/openclaw.json
 ```
 
-### "disconnected (1008): control ui requires device identity" / "requires HTTPS or localhost"
+### "disconnected (1008): control ui requires device identity"
 
-**Symptom**: Gateway UI shows error 1008 or "requires secure context / device identity".
+**Symptom**: the Control UI connects, then drops with error 1008 mentioning device identity.
 
-**Cause**: OpenClaw v2026.2.21+ requires HTTPS or localhost. Plain HTTP over LAN is blocked. (v2026.2.22 further hardens this by defaulting remote onboarding to `wss://` and rejecting insecure non-loopback targets.)
+**Cause**: the browser has not been paired yet. Since the `2026.8.x` line every Control UI browser pairs once, on any origin — the old `dangerouslyDisableDeviceAuth` bypass is retired and inert.
 
-**Fix** (pick one):
-1. **Easiest**: Set `access_mode` to **lan_https** in add-on Configuration → restart. This adds a built-in HTTPS proxy with zero external setup.
-2. **External proxy**: Set `access_mode` to **lan_reverse_proxy** and configure NPM/Caddy/Traefik with TLS.
-3. **SSH tunnel** (desktop only): `ssh -L 18789:127.0.0.1:18789 user@ha-ip` then open `http://localhost:18789`.
+**Fix**: approve the browser from the add-on terminal — see [Device pairing](#device-pairing-first-connection):
+
+```sh
+openclaw devices list
+openclaw devices approve <requestId>
+```
+
+> Older versions of this documentation said the Control UI "requires HTTPS or localhost". That restriction was removed upstream: device identity is signed with pure-JS Ed25519 and no longer depends on a secure context. HTTPS remains recommended so your token is not sent in clear text.
 
 ### "disconnected (1008): origin not allowed"
 
@@ -1016,34 +1046,22 @@ jq 'del(.tools.web.search.provider)' /config/.openclaw/openclaw.json > /tmp/open
    ```
    Then restart the add-on to re-merge defaults + extras.
 
-### "disconnected (1008): pairing required"
+### "Device pairing required" when opening the Gateway Web UI
 
-**Symptom**: Gateway UI loads over HTTPS but shows `pairing required` and the status is Offline.
+**Symptom**: the Gateway Dashboard shows **Device pairing required** with a request ID and will not connect.
 
-**Cause**: OpenClaw v2026.2.21+ requires new devices to complete a pairing handshake before the Control UI WebSocket is accepted. Loopback connections are auto-approved (v2026.2.22 further improves this with loopback scope-upgrade auto-approval), but LAN connections (including those through the HTTPS proxy) require explicit approval.
+**Cause**: expected on a browser's first connection. OpenClaw pairs each Control UI browser once.
 
-**Fix**: In **v0.5.50+** the add-on configures `gateway.controlUi.dangerouslyDisableDeviceAuth` in `lan_https` mode. By default it is enabled (`controlui_disable_device_auth: true`) to bypass per-device pairing while still enforcing token auth. If you prefer stricter behavior, set `controlui_disable_device_auth: false` and approve new devices manually.
+**Fix**: in the add-on terminal (the gateway host *is* this container):
 
-> **v2026.2.22 note:** The gateway now logs a security warning on startup when this flag is active. The warning is expected and harmless — run `openclaw security audit` for details.
+```sh
+openclaw devices list
+openclaw devices approve <requestId>
+```
 
-1. **Restart the add-on** — the startup script writes the config before launching the gateway.
-2. If the error persists, set it manually:
-   ```sh
-   nano /config/.openclaw/openclaw.json
-   ```
-   Ensure `gateway.controlUi` contains:
-   ```json
-   "controlUi": {
-     "dangerouslyDisableDeviceAuth": true,
-     "allowedOrigins": ["https://YOUR_IP:18789"]
-   }
-   ```
-   Then restart only the gateway process: `oc-gateway restart`
-3. Alternatively, approve devices individually without disabling auth:
-   ```sh
-   openclaw devices list       # show pending pairing requests
-   openclaw devices approve <requestId>
-   ```
+Then click **Connect** again. Full walkthrough: [Device pairing](#device-pairing-first-connection).
+
+> **Do not** try to disable pairing with `gateway.controlUi.dangerouslyDisableDeviceAuth`. OpenClaw retired that flag in the `2026.8.x` line; it is inert, `openclaw doctor --fix` removes it, and the add-on no longer writes it. Approving the device is the supported path.
 
 ### Gateway UI shows "Unauthorized"
 

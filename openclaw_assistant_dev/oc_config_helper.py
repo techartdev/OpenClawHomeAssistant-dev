@@ -469,23 +469,18 @@ def apply_gateway_settings(mode: str, remote_url: str, bind_mode: str, port: int
         return True
 
 
-def set_control_ui_origins(origins_csv: str, additional_origins_csv: str = "", disable_device_auth: bool = True): 
+def set_control_ui_origins(origins_csv: str, additional_origins_csv: str = "", disable_device_auth: bool = True):
     """
     Configure gateway.controlUi for the built-in HTTPS proxy.
 
-    Sets:
-      - allowedOrigins: the HTTPS proxy origins so the browser WebSocket
-        is accepted (required since v2026.2.21).
-      - dangerouslyDisableDeviceAuth: controlled by add-on option
-        `controlui_disable_device_auth` (default true). When true, skips
-        interactive device pairing; token auth remains enforced.
-
-    Also removes any stale/invalid keys (e.g. pairingMode) that may have
-    been written by earlier add-on versions.
+    Sets allowedOrigins so the browser WebSocket is accepted, and removes keys
+    that OpenClaw has retired or never accepted.
 
     Args:
         origins_csv: Comma-separated list of default origins provided by the add-on.
         additional_origins_csv: Comma-separated list of user-provided extra origins.
+        disable_device_auth: Accepted for backward compatibility and ignored —
+            gateway.controlUi.dangerouslyDisableDeviceAuth is retired upstream.
     """
     cfg = read_config()
     if cfg is None:
@@ -517,14 +512,14 @@ def set_control_ui_origins(origins_csv: str, additional_origins_csv: str = "", d
         control_ui["allowedOrigins"] = merged_origins
         changes.append(f"allowedOrigins: {current_origins} -> {merged_origins}")
 
-    # --- dangerouslyDisableDeviceAuth ---
-    # Optional bypass of interactive per-device pairing (error 1008: pairing required).
-    # Token auth is still enforced; this only controls the approval ceremony.
-    desired_device_auth_flag = True if disable_device_auth else False
-    if control_ui.get("dangerouslyDisableDeviceAuth") is not desired_device_auth_flag:
-        prev = control_ui.get("dangerouslyDisableDeviceAuth")
-        control_ui["dangerouslyDisableDeviceAuth"] = desired_device_auth_flag
-        changes.append(f"dangerouslyDisableDeviceAuth: {prev} -> {desired_device_auth_flag}")
+    # --- dangerouslyDisableDeviceAuth (retired upstream) ---
+    # OpenClaw retired this flag in the 2026.8.x line: it is inert, the security
+    # audit lists it as a dangerous key, and `openclaw doctor --fix` removes it.
+    # Writing it back every boot would fight Doctor, so the add-on now strips it.
+    # Browsers pair once instead (`openclaw devices approve <requestId>`).
+    if "dangerouslyDisableDeviceAuth" in control_ui:
+        del control_ui["dangerouslyDisableDeviceAuth"]
+        changes.append("removed retired key: dangerouslyDisableDeviceAuth (now inert upstream)")
 
     # --- Remove invalid keys from earlier add-on versions ---
     for stale_key in ("pairingMode",):
@@ -533,8 +528,7 @@ def set_control_ui_origins(origins_csv: str, additional_origins_csv: str = "", d
             changes.append(f"removed invalid key: {stale_key}")
 
     if not changes:
-        status = "disabled" if desired_device_auth_flag else "enabled"
-        print(f"INFO: controlUi already correct: origins={merged_origins}, deviceAuth={status}")
+        print(f"INFO: controlUi already correct: origins={merged_origins}")
         return True
 
     if write_config(cfg):
