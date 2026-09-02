@@ -277,7 +277,8 @@ warn_legacy_persistent_dir() {
   local label="$2"
   if [ -e "$path" ]; then
     echo "WARN: Found legacy persistent ${label} at ${path}, but persistence is disabled."
-    echo "WARN: It will still inflate Home Assistant backups until you remove or archive it manually."
+    echo "WARN: It is excluded from Home Assistant backups, but still uses disk space."
+    echo "WARN: Remove it with: rm -rf ${path}"
   fi
 }
 

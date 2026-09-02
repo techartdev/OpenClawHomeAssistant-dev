@@ -4,7 +4,11 @@ All notable changes to the OpenClaw Assistant Home Assistant Add-on will be docu
 
 ## [0.5.103] - 2026-09-02
 
+### Added
+- **Smaller Home Assistant backups**: the add-on now declares `backup_exclude`, so regenerable caches and tooling (`.linuxbrew`, `.node_global`, `.npm`, `.cache`, `__pycache__`, stale `*.jsonl.lock` files) are skipped when Home Assistant backs the add-on up. Excluded directories are pruned without being walked, so backups are both smaller and faster. All user state — `openclaw.json`, config snapshots, skills, agent sessions, the `clawd` workspace, keys, secrets and certificates — is still backed up. Note that a restore replaces `/config` wholesale, so excluded tooling must be reinstalled rather than restored.
+
 ### Changed
+- Startup warnings about legacy `/config/.node_global` and `/config/.linuxbrew` directories no longer claim they inflate Home Assistant backups (they are now excluded). The warning explains they only use disk space and gives the exact removal command.
 - Sync the DEV add-on forward to the current stable baseline: bump bundled OpenClaw from `2026.7.1` to `2026.8.2`.
 
 ### Fixed

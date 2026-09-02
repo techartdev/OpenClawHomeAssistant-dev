@@ -885,18 +885,39 @@ openclaw --version
 
 Home Assistant's built-in backup system automatically includes add-on configuration data (`/config/`). By default this covers the important user state: OpenClaw config, skills, workspace, keys, and tokens — without large optional toolchains.
 
-### Backup-friendly defaults (v0.5.75+)
+### What is excluded from backups (v0.5.103+)
 
-Starting with v0.5.75, the add-on keeps large optional toolchains out of backups by default:
+The add-on tells the Supervisor to skip regenerable caches and tooling, so backups stay small no matter how your persistence options are set:
 
-- `persist_node_global: false` → `/config/.node_global/` is not used unless you opt in
-- `persist_brew_tools: false` → `/config/.linuxbrew/` is not used unless you opt in
+| Excluded | Why it is safe |
+|---|---|
+| `.linuxbrew/` | Homebrew install and cellar — reinstallable with `brew install` |
+| `.node_global/` | npm/pnpm global installs — reinstallable |
+| `.npm/` | npm download cache — rebuilt on demand |
+| `.cache/` | tool caches (Chromium, build artifacts) — rebuilt on demand |
+| `__pycache__/` | Python bytecode — regenerated automatically |
+| `*.jsonl.lock` | stale session locks — never useful to restore |
 
-Turn these on only if you specifically want user-installed npm global skills or brew-installed CLI tools to survive add-on rebuilds.
+Everything else is backed up: `openclaw.json`, config snapshots, skills, agent sessions, the `clawd` workspace, keys, secrets and TLS certificates.
+
+> **Important**: restoring a backup replaces `/config` wholesale, so excluded directories are **removed** by a restore rather than left in place. After restoring, reinstall any brew or global npm tools you depend on. Caches rebuild themselves.
+
+### Persistence vs. backups
+
+These are two different things, and since v0.5.103 they no longer trade off against each other:
+
+- **Persistence** (`persist_node_global`, `persist_brew_tools`) controls whether tooling survives an **add-on rebuild**. Both default to `false`.
+- **Backup exclusion** (above) controls whether it lands in a **Home Assistant backup**. Always on.
+
+So you can safely enable persistence to stop losing `brew`/npm tools on every add-on update, without inflating your backups. The cost is that those tools are not restored from a backup — you reinstall them.
 
 ### Migration note for older installs
 
-If you used an older add-on version, you may already have legacy directories such as `/config/.node_global/` or `/config/.linuxbrew/` from previous persistent behavior. Disabling persistence stops future growth, but those directories still count toward backup size until you remove or archive them manually.
+If you used an older add-on version, you may already have legacy directories such as `/config/.node_global/` or `/config/.linuxbrew/` from previous persistent behavior. Since v0.5.103 these no longer count toward backup size, but they still occupy disk. The add-on warns about them at startup; remove them when you no longer need them:
+
+```sh
+rm -rf /config/.node_global /config/.linuxbrew
+```
 
 **To create a backup**: Go to **Settings → System → Backups → Create Backup**
 
@@ -905,8 +926,8 @@ If you used an older add-on version, you may already have legacy directories suc
 # Key paths to back up:
 # /config/.openclaw/     - OpenClaw config, skills, agent data
 # /config/clawd/         - ClawHub workspace
-# /config/.node_global/  - User-installed npm skills (only if persist_node_global=true)
-# /config/.linuxbrew/    - Homebrew tools (only if persist_brew_tools=true)
+# (.node_global / .linuxbrew are intentionally excluded from HA backups —
+#  reinstall those tools instead of restoring them)
 # /config/keys/          - SSH keys
 # /config/secrets/       - Tokens
 ```

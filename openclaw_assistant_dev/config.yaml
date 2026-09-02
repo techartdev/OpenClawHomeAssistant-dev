@@ -25,6 +25,20 @@ panel_icon: mdi:robot
 # Users can turn this off with the Watchdog toggle on the add-on page.
 watchdog: tcp://[HOST]:48099
 
+# Keep Home Assistant backups small by excluding regenerable caches and
+# tooling from the add-on backup. Patterns are matched against the full path
+# of each item; a matching directory is skipped without descending into it.
+# NOTE: restoring a backup replaces /config wholesale, so anything listed here
+# is NOT restored and must be reinstalled (brew/npm tools) or is rebuilt on
+# demand (caches). User data, skills, agents and secrets are never excluded.
+backup_exclude:
+  - ".linuxbrew"      # Homebrew install + cellar (persist_brew_tools)
+  - ".node_global"    # npm/pnpm global installs (persist_node_global)
+  - ".npm"            # npm download cache
+  - ".cache"          # generic tool caches (Chromium, build artifacts)
+  - "__pycache__"     # Python bytecode, at any depth
+  - "*.jsonl.lock"    # stale session locks; never useful to restore
+
 map:
   - addon_config:rw
   - share:rw
