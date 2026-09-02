@@ -2,6 +2,14 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.103] - 2026-09-02
+
+### Changed
+- Sync the DEV add-on forward to the current stable baseline: bump bundled OpenClaw from `2026.7.1` to `2026.8.2`.
+
+### Fixed
+- Preserve explicit `false` values for boolean add-on options instead of replacing them with `true` defaults during startup. This restores settings such as strict Control UI device authentication, disabled terminal access, and IPv6-capable DNS behavior after an add-on restart or rebuild. (Ported from stable `0.5.88`.)
+
 ## [0.5.102] - 2026-08-12
 
 Phase 1 of the resource/observability update, staged here for testing before it lands in the stable add-on.
