@@ -1445,12 +1445,17 @@ attempt_doctor_fix() {
     python3 "$HELPER_PATH" snapshot "$CONFIG_BACKUP_KEEP" pre-doctor-fix --force ||       echo "WARN: Could not snapshot openclaw.json before doctor --fix; continuing."
   fi
 
-  if openclaw doctor --fix; then
+  # --non-interactive is required: there is no TTY here, and without it doctor
+  # only prints advisory notices and skips the repairs that need confirmation.
+  # --yes accepts repair defaults so migrations are not deferred.
+  if openclaw doctor --fix --non-interactive --yes; then
     echo "INFO: 'openclaw doctor --fix' completed; retrying gateway startup."
   else
-    echo "WARN: 'openclaw doctor --fix' reported errors; retrying gateway startup anyway."
-    echo "WARN: If the gateway still will not start, run 'openclaw doctor' in the terminal"
-    echo "WARN: and check the stability bundles in /config/.openclaw/logs/stability/."
+    echo "WARN: 'openclaw doctor --fix' exited non-zero — the repair did not fully complete."
+    echo "WARN: Doctor exits non-zero while a legacy source or an interrupted"
+    echo "WARN: '.doctor-importing' claim remains. Open the add-on terminal and run:"
+    echo "WARN:   openclaw doctor --fix"
+    echo "WARN: Do not delete the reported files to silence it; they hold unmigrated state."
   fi
   return 0
 }
@@ -1470,6 +1475,10 @@ while true; do
     done
     GW_EXIT_CODE=0
   fi
+
+  # Capture how long the runtime actually lived BEFORE the daemon-detection
+  # retries below, otherwise their sleeps count as gateway uptime.
+  GW_UPTIME=$((SECONDS - GW_START_SECONDS))
 
   if [ "$SHUTTING_DOWN" = "true" ]; then
     break
@@ -1520,7 +1529,9 @@ while true; do
   # Exponential backoff so a persistently broken gateway cannot hammer the CPU
   # or fill the disk with stability bundles. Reset whenever a start sticks.
   # A runtime that stayed up for a while is not part of a crash loop.
-  if [ $((SECONDS - GW_START_SECONDS)) -ge 60 ]; then
+  # The threshold is well above a normal cold start (~45s on this image) so a
+  # gateway that only ever survives its own startup still counts as looping.
+  if [ "$GW_UPTIME" -ge 120 ]; then
     GW_FAIL_STREAK=0
   fi
   GW_FAIL_STREAK=$((GW_FAIL_STREAK + 1))
@@ -1530,7 +1541,7 @@ while true; do
   fi
 
   # After a few quick failures, try the one-shot upgrade repair before backing off.
-  if [ "$GW_FAIL_STREAK" -ge 3 ] && attempt_doctor_fix; then
+  if [ "$GW_FAIL_STREAK" -ge 2 ] && attempt_doctor_fix; then
     GW_BACKOFF=2
   fi
 

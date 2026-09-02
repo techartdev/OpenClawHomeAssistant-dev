@@ -2,6 +2,12 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.105] - 2026-09-02
+
+### Fixed
+- **Gateway restart loop was not actually recovering** (follow-up to `0.5.104`): the automatic repair ran `openclaw doctor --fix` without `--non-interactive`. With no TTY, Doctor printed advisory notices and skipped the migration, so the loop continued. It now runs `openclaw doctor --fix --non-interactive --yes`, the documented automation form, and reports clearly when Doctor exits non-zero because a legacy source or interrupted `.doctor-importing` claim remains.
+- **Restart backoff never escalated**: gateway uptime was measured after the daemon-detection retry loop, so its sleeps counted as uptime. A gateway that died ~45s into startup measured ~65s, tripped the 60s "healthy" reset, and pinned the retry interval at 2s forever. Uptime is now captured the moment the runtime exits, and the healthy threshold is 120s — comfortably above a normal ~45s cold start. The repair is also attempted after 2 consecutive failures instead of 3, since each failed boot costs about a minute.
+
 ## [0.5.104] - 2026-09-02
 
 ### Fixed
