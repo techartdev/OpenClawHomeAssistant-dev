@@ -1422,7 +1422,41 @@ fi
 #        guard to prevent launching a duplicate.
 GW_IS_CHILD=true   # true only when GW_PID was started by us (can use `wait`)
 
+# Consecutive failed starts, used for restart backoff (reset once a boot sticks).
+GW_FAIL_STREAK=0
+# `openclaw doctor --fix` is attempted at most once per add-on start.
+GW_DOCTOR_FIX_DONE=false
+
+# Some OpenClaw upgrades gate startup behind a data migration and refuse to boot
+# until `openclaw doctor --fix` has run (e.g. the legacy workspace state check
+# introduced in 2026.8.2). Without this the supervisor restarts forever, writing
+# a stability bundle on every attempt. Try the documented repair exactly once,
+# snapshotting openclaw.json first so the change is reversible.
+attempt_doctor_fix() {
+  if [ "$GW_DOCTOR_FIX_DONE" = "true" ]; then
+    return 1
+  fi
+  GW_DOCTOR_FIX_DONE=true
+
+  echo "NOTICE: Gateway failed to start repeatedly; running 'openclaw doctor --fix' once."
+  echo "NOTICE: This is the repair OpenClaw itself recommends for upgrade migrations."
+
+  if [ -f "$HELPER_PATH" ] && [ -f "$OPENCLAW_CONFIG_PATH" ]; then
+    python3 "$HELPER_PATH" snapshot "$CONFIG_BACKUP_KEEP" pre-doctor-fix --force ||       echo "WARN: Could not snapshot openclaw.json before doctor --fix; continuing."
+  fi
+
+  if openclaw doctor --fix; then
+    echo "INFO: 'openclaw doctor --fix' completed; retrying gateway startup."
+  else
+    echo "WARN: 'openclaw doctor --fix' reported errors; retrying gateway startup anyway."
+    echo "WARN: If the gateway still will not start, run 'openclaw doctor' in the terminal"
+    echo "WARN: and check the stability bundles in /config/.openclaw/logs/stability/."
+  fi
+  return 0
+}
+
 while true; do
+  GW_START_SECONDS=$SECONDS
   if [ "$GW_IS_CHILD" = "true" ]; then
     # Efficient blocking wait on our child process.
     GW_EXIT_CODE=0
@@ -1460,6 +1494,7 @@ while true; do
 
   if [ -n "$RESTARTED_PID" ]; then
     echo "INFO: OpenClaw runtime active (PID $RESTARTED_PID); monitoring."
+    GW_FAIL_STREAK=0
     GW_PID="$RESTARTED_PID"
     GW_IS_CHILD=false
     continue
@@ -1476,13 +1511,39 @@ while true; do
       | sed -n 's/.*pid=\([0-9]*\).*/\1/p' \
       | head -1 || true)
     echo "INFO: Gateway port ${GATEWAY_INTERNAL_PORT} occupied by PID ${PORT_PID:-unknown}; monitoring."
+    GW_FAIL_STREAK=0
     GW_PID="${PORT_PID:-$GW_PID}"
     GW_IS_CHILD=false
     continue
   fi
 
-  echo "WARN: OpenClaw runtime exited with code ${GW_EXIT_CODE}. Restarting in 2s..."
-  sleep 2
+  # Exponential backoff so a persistently broken gateway cannot hammer the CPU
+  # or fill the disk with stability bundles. Reset whenever a start sticks.
+  # A runtime that stayed up for a while is not part of a crash loop.
+  if [ $((SECONDS - GW_START_SECONDS)) -ge 60 ]; then
+    GW_FAIL_STREAK=0
+  fi
+  GW_FAIL_STREAK=$((GW_FAIL_STREAK + 1))
+  GW_BACKOFF=$((2 ** (GW_FAIL_STREAK < 6 ? GW_FAIL_STREAK : 6)))
+  if [ "$GW_BACKOFF" -gt 60 ]; then
+    GW_BACKOFF=60
+  fi
+
+  # After a few quick failures, try the one-shot upgrade repair before backing off.
+  if [ "$GW_FAIL_STREAK" -ge 3 ] && attempt_doctor_fix; then
+    GW_BACKOFF=2
+  fi
+
+  if [ "$GW_FAIL_STREAK" -ge 5 ]; then
+    echo "ERROR: OpenClaw runtime has failed ${GW_FAIL_STREAK} times in a row."
+    echo "ERROR: The terminal and add-on page stay available — open the terminal and run:"
+    echo "ERROR:   openclaw doctor"
+    echo "ERROR:   oc-gateway status"
+    echo "ERROR: Recent failures are detailed in /config/.openclaw/logs/stability/."
+  fi
+
+  echo "WARN: OpenClaw runtime exited with code ${GW_EXIT_CODE}. Restarting in ${GW_BACKOFF}s..."
+  sleep "$GW_BACKOFF"
 
   # Stop the loopback relay BEFORE restarting the gateway (tailnet mode only).
   # The relay holds 127.0.0.1:GATEWAY_PORT — leaving it up causes the new gateway

@@ -1166,6 +1166,34 @@ Restart the add-on — it will generate a fresh config. You'll need to run `open
 oc-config diff 1
 ```
 
+### Gateway restart loop after an OpenClaw upgrade (`requires migration`)
+
+**Symptom**: after an add-on update the gateway never comes up, and the log repeats:
+
+```
+Gateway failed to start: Legacy workspace setup state requires migration for
+/config/.openclaw/workspace; run openclaw doctor --fix.
+WARN: OpenClaw runtime exited with code 1. Restarting in 2s...
+```
+
+**Cause**: some OpenClaw releases gate startup behind a one-time data migration and refuse to boot until it has run. This is an upstream requirement, not an add-on misconfiguration.
+
+**Fix**: since v0.5.104 the add-on detects a repeated failed start and runs `openclaw doctor --fix` automatically (once per start, after snapshotting `openclaw.json` first). If it has not recovered on its own, the web terminal stays available during the loop — open it and run:
+
+```sh
+openclaw doctor --fix
+```
+
+Then restart the add-on. If the gateway still refuses to start:
+
+```sh
+openclaw doctor          # full report
+oc-gateway status        # add-on-native status
+ls /config/.openclaw/logs/stability/   # per-failure diagnostic bundles
+```
+
+> The add-on backs off between restart attempts (2s doubling to a 60s cap) so a gateway that cannot start does not spin the CPU or fill the disk with stability bundles. The terminal, landing page and Ingress remain usable throughout.
+
 ### `JavaScript heap out of memory` / gateway restart loop on a Raspberry Pi
 
 **Symptom**: The gateway restarts repeatedly; the log shows heap allocation failures, or the whole add-on is killed.
