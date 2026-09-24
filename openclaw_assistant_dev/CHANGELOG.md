@@ -2,6 +2,12 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.102] - 2026-09-25
+
+### Fixed
+- Restrict the Home Assistant Ingress backend on port `48099` to the Supervisor proxy and loopback, preventing direct LAN access from bypassing Ingress authentication and exposing the terminal.
+- In `lan_https` mode, rebuild forwarded client identity at nginx and omit it for same-host loopback clients. This is compatible with OpenClaw's strict proxy-attribution checks and prevents client-supplied forwarding chains from being trusted.
+
 ## [0.5.101] - 2026-07-16
 
 ### Changed

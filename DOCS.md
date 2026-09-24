@@ -29,7 +29,7 @@ The add-on container runs three services:
 | Service | Port | Purpose |
 |---|---|---|
 | **OpenClaw Gateway** | 18789 (configurable) | The AI agent server — handles skills, chat, automations |
-| **nginx** (Ingress proxy) | 48099 (fixed) | Serves the landing page inside Home Assistant |
+| **nginx** (Ingress proxy) | 48099 (fixed, Ingress-only) | Serves the landing page inside Home Assistant; direct LAN access is denied |
 | **ttyd** (Web terminal) | 7681 (configurable) | Provides a browser-based terminal for setup and management |
 
 When you open the add-on page in Home Assistant, nginx serves a landing page with:
