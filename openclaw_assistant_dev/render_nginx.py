@@ -32,6 +32,11 @@ def main():
     disk_pct = os.environ.get('DISK_PCT', '')
     nginx_log_level = os.environ.get('NGINX_LOG_LEVEL', 'minimal')
 
+    # Resolved resource profile (run.sh turns `auto` into a concrete profile)
+    resource_profile = os.environ.get('RESOURCE_PROFILE', 'auto')
+    node_heap_mb = os.environ.get('NODE_HEAP_MB', '')
+    node_heap_label = f'{node_heap_mb} MB' if node_heap_mb else 'unlimited'
+
     # Token comes from environment (best-effort CLI query in run.sh)
     token = os.environ.get('GW_TOKEN', '')
 
@@ -115,6 +120,8 @@ def main():
     landing = landing.replace('__DISK_USED__', disk_used)
     landing = landing.replace('__DISK_AVAIL__', disk_avail)
     landing = landing.replace('__DISK_PCT__', disk_pct)
+    landing = landing.replace('__RESOURCE_PROFILE__', resource_profile)
+    landing = landing.replace('__NODE_HEAP__', node_heap_label)
 
     out_dir = Path('/etc/nginx/html')
     out_dir.mkdir(parents=True, exist_ok=True)

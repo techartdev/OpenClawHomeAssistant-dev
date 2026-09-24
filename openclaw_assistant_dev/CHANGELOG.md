@@ -2,12 +2,81 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
-## [0.5.102] - 2026-09-25
+## [0.5.110] - 2026-09-25
 
 ### Fixed
 - Restrict the Home Assistant Ingress backend on port `48099` to the Supervisor proxy and loopback, preventing direct LAN access from bypassing Ingress authentication and exposing the terminal.
 - In `lan_https` mode, rebuild forwarded client identity at nginx and omit it for same-host loopback clients. This is compatible with OpenClaw's strict proxy-attribution checks and prevents client-supplied forwarding chains from being trusted.
 
+## [0.5.109] - 2026-09-02
+
+### Changed
+- **Documentation reviewed against OpenClaw `2026.8.2`.** Added a *Device pairing (first connection)* walkthrough — the gateway host is the add-on container, so `openclaw devices list` / `openclaw devices approve <requestId>` in the add-on terminal is all that is needed, and the `ssh -N -L` hint printed by `openclaw dashboard` does not apply here. Corrected the long-standing claim that the Control UI requires HTTPS or localhost: upstream removed that restriction (device identity is signed with pure-JS Ed25519 on any origin), so the guidance now recommends HTTPS for token confidentiality rather than presenting it as mandatory. Rewrote the two error-1008 troubleshooting entries around pairing, and marked `controlui_disable_device_auth` as deprecated and inert in all six locales.
+
+### Fixed
+- **Stopped writing a retired OpenClaw key.** The add-on set `gateway.controlUi.dangerouslyDisableDeviceAuth` on every start to skip Control UI device pairing. OpenClaw retired that flag in the `2026.8.x` line: it is inert, the security audit reports it as a dangerous key, and `openclaw doctor --fix` deletes it — so the add-on was re-adding it every boot and fighting Doctor. The add-on now removes the key instead, which also clears the "dangerous config flags enabled" startup warning. Browsers pair once via `openclaw devices approve <requestId>`.
+
+## [0.5.108] - 2026-09-02
+
+### Added
+- New `ha_base_url` option to point the health sensors at a Home Assistant on a non-default port or host (empty = auto-detect).
+
+### Fixed
+- **Health sensors could not reach a Home Assistant that serves HTTPS**: endpoint detection only ever tried plain `http://`, which a TLS listener answers by closing the connection — surfacing as `HTTP 000` (curl: *Empty reply from server*). Detection now probes `https` and `http` across `127.0.0.1`, `localhost`, `homeassistant` and `homeassistant.local`, and uses the first endpoint that answers. TLS verification is skipped for these local endpoints because Home Assistant's certificate is normally issued for its external hostname and never matches a loopback address; the connection stays on the local host/LAN.
+- Detection is retried on later cycles instead of only at startup, so sensors still come up when the add-on starts before Home Assistant is listening.
+
+## [0.5.107] - 2026-09-02
+
+### Fixed
+- **Health sensors could not reach Home Assistant (`HTTP 000`)**: `oc-health` preferred the Supervisor proxy whenever `SUPERVISOR_TOKEN` was present, but this add-on runs with `host_network: true`, so the container is not on the Supervisor bridge network and the `supervisor` hostname does not resolve. Every sensor update failed at the connection level. It now prefers the user's long-lived token against the host's Home Assistant on `localhost:8123`, and only uses the Supervisor proxy when that hostname actually resolves.
+- The same endpoint-selection bug in the MCP auto-configuration would have registered an unreachable `http://supervisor/core/api/mcp` URL; it now applies the same reachability check.
+- Health sensor failures are logged once per status change instead of one line per entity per interval, so an outage can no longer fill the add-on log (previously ~7000 lines a day).
+- Failures now explain themselves: `HTTP 000` reports that Home Assistant is unreachable at the resolved endpoint, `401`/`403` points at the token, rather than printing a bare status code.
+
+### Added
+- `oc-health check`: diagnoses credentials and API connectivity in one command — which endpoint was chosen, whether a token is present, whether the Supervisor host resolves, and the result of a live probe.
+
+## [0.5.106] - 2026-09-02
+
+### Fixed
+- **`proxy_attribution_required` in `lan_https` mode**: OpenClaw `2026.8.2` began rejecting requests that carry forwarded identity headers from an untrusted source. The add-on's built-in HTTPS proxy runs on loopback and sets `X-Forwarded-For` / `X-Real-IP` / `X-Forwarded-Proto`, but loopback was never added to `gateway.trustedProxies`, so the gateway refused every request with `proxy_attribution_required`. `lan_https` now trusts `127.0.0.1` and `::1` (merged with any `gateway_trusted_proxies` you set, and deduplicated). As a side benefit the gateway can now attribute the real LAN client IP for rate limiting instead of seeing every request as loopback.
+
+## [0.5.105] - 2026-09-02
+
+### Fixed
+- **Gateway restart loop was not actually recovering** (follow-up to `0.5.104`): the automatic repair ran `openclaw doctor --fix` without `--non-interactive`. With no TTY, Doctor printed advisory notices and skipped the migration, so the loop continued. It now runs `openclaw doctor --fix --non-interactive --yes`, the documented automation form, and reports clearly when Doctor exits non-zero because a legacy source or interrupted `.doctor-importing` claim remains.
+- **Restart backoff never escalated**: gateway uptime was measured after the daemon-detection retry loop, so its sleeps counted as uptime. A gateway that died ~45s into startup measured ~65s, tripped the 60s "healthy" reset, and pinned the retry interval at 2s forever. Uptime is now captured the moment the runtime exits, and the healthy threshold is 120s — comfortably above a normal ~45s cold start. The repair is also attempted after 2 consecutive failures instead of 3, since each failed boot costs about a minute.
+
+## [0.5.104] - 2026-09-02
+
+### Fixed
+- **Gateway restart loop after an OpenClaw upgrade**: releases that gate startup behind a data migration (such as the legacy workspace state check in `2026.8.2`) made the supervisor restart the gateway forever, writing a stability bundle on every attempt. The add-on now runs the documented `openclaw doctor --fix` repair once per start after repeated failures — snapshotting `openclaw.json` first so it is reversible — and backs off between restarts (2s doubling to a 60s cap) instead of retrying every 2 seconds. After five consecutive failures it logs the exact diagnostic commands to run. The terminal and add-on page stay available throughout.
+
+## [0.5.103] - 2026-09-02
+
+### Added
+- **Smaller Home Assistant backups**: the add-on now declares `backup_exclude`, so regenerable caches and tooling (`.linuxbrew`, `.node_global`, `.npm`, `.cache`, `__pycache__`, stale `*.jsonl.lock` files) are skipped when Home Assistant backs the add-on up. Excluded directories are pruned without being walked, so backups are both smaller and faster. All user state — `openclaw.json`, config snapshots, skills, agent sessions, the `clawd` workspace, keys, secrets and certificates — is still backed up. Note that a restore replaces `/config` wholesale, so excluded tooling must be reinstalled rather than restored.
+
+### Changed
+- Startup warnings about legacy `/config/.node_global` and `/config/.linuxbrew` directories no longer claim they inflate Home Assistant backups (they are now excluded). The warning explains they only use disk space and gives the exact removal command.
+- Sync the DEV add-on forward to the current stable baseline: bump bundled OpenClaw from `2026.7.1` to `2026.8.2`.
+
+### Fixed
+- Preserve explicit `false` values for boolean add-on options instead of replacing them with `true` defaults during startup. This restores settings such as strict Control UI device authentication, disabled terminal access, and IPv6-capable DNS behavior after an add-on restart or rebuild. (Ported from stable `0.5.88`.)
+
+## [0.5.102] - 2026-08-12
+
+Phase 1 of the resource/observability update, staged here for testing before it lands in the stable add-on.
+
+### Added
+- **Resource profiles** (`resource_profile`): the add-on now gives the gateway an explicit Node.js heap budget instead of letting it size against total host memory. `auto` (default) picks `low` / `balanced` / `high` from CPU architecture and RAM, and never writes to `openclaw.json`. Selecting `low` explicitly also applies conservative OpenClaw defaults (currently `browser.enabled: false`) for keys you have not set yourself. The resolved profile and heap limit are logged at startup and shown on the landing page.
+- **Home Assistant health sensors** (`ha_health_sensors`, `ha_health_interval`): optionally publish `sensor.openclaw_gateway`, `sensor.openclaw_version`, `sensor.openclaw_gateway_memory`, `sensor.openclaw_disk_used` and `sensor.openclaw_certificate_expiry` so you can alert on gateway health, disk usage and certificate expiry from automations. Requires `homeassistant_token`. New `oc-health` helper (`show` / `once` / `loop`) for previewing and debugging.
+- **Config snapshots and rollback** (`config_backup_keep`): `openclaw.json` is now snapshotted to `/config/.openclaw/backups` before the add-on's first configuration write of each start, so an unwanted change can be undone. New `oc-config` helper: `list`, `diff`, `restore`, `snapshot`. Restoring always backs up the config it replaces first. Identical configs are not re-snapshotted, and only the newest `config_backup_keep` (default 10) are kept.
+- Supervisor watchdog on the ingress port, so Home Assistant restarts the add-on if the ingress proxy stops answering. Can be turned off with the Watchdog toggle on the add-on page.
+
+### Fixed
+- Add the `persist_node_global` and `persist_brew_tools` labels that were missing from the DEV translation files, so both options show proper names in the Home Assistant UI instead of raw option keys.
+- Documentation listed Node.js 22 in the bundled tools table; the DEV image has shipped Node.js 24 since `0.5.101`.
 ## [0.5.101] - 2026-07-16
 
 ### Changed
