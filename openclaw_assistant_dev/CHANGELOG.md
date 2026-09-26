@@ -2,6 +2,14 @@
 
 All notable changes to the OpenClaw Assistant Home Assistant Add-on will be documented in this file.
 
+## [0.5.111] - 2026-09-26
+
+### Changed
+- Bump bundled OpenClaw from `2026.8.2` to `2026.9.6` for DEV testing.
+
+### Compatibility
+- OpenClaw `2026.9.6` moves Code Mode cells to plain JavaScript. Existing TypeScript Code Mode cells must be rewritten; this add-on does not ship any.
+
 ## [0.5.110] - 2026-09-25
 
 ### Fixed
